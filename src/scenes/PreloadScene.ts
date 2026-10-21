@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { assetUrl, ESSENTIAL_IMAGES } from '../config/assetManifest';
 import { SCENE_KEYS } from '../config/constants';
 import { preloadVillageAssets, WORLD_REQUIRED_TEXTURES } from '../world/WorldBuilder';
