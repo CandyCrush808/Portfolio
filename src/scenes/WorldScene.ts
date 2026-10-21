@@ -252,6 +252,8 @@ export class WorldScene extends Phaser.Scene {
 
   private setupEventListeners(): void {
     const onInteract = (): void => {
+      // Dialogue and modal overlays freeze the player; ignore world actions until closed.
+      if (this.player.isFrozen()) return;
       if (this.currentInteractable) {
         this.currentInteractable.action();
       }
