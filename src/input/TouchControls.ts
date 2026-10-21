@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 
 type Direction = 'up'|'down'|'left'|'right';
 interface Button { direction: Direction; x:number; y:number; size:number }
