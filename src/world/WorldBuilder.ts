@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { VILLAGE } from './maps/villageMap';
 import { ASSET_CATALOG, assetUrl } from '../config/assetManifest';
 
@@ -35,7 +35,9 @@ export class WorldBuilder {
     const paths = scene.add.graphics().setDepth(1);
     paths.lineStyle(72, 0x967957, 1); paths.lineStyle(64, 0xc2a77f, 1);
     for (const route of VILLAGE.paths) {
-      paths.beginPath(); paths.moveTo(route[0].x, route[0].y);
+      const start = route[0];
+      if (!start || route.length < 2) continue;
+      paths.beginPath(); paths.moveTo(start.x, start.y);
       route.slice(1).forEach(p => paths.lineTo(p.x, p.y)); paths.strokePath();
     }
     // Spawn plaza.
