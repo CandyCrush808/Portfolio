@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { COLORS, TEXTURE_KEYS, TILE_SIZE } from '../config/constants';
 
 export interface TestWorld {
