@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 
 export class KeyboardInput {
   private readonly keys: Record<'W'|'A'|'S'|'D'|'UP'|'DOWN'|'LEFT'|'RIGHT', Phaser.Input.Keyboard.Key> | null;
