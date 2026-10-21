@@ -31,9 +31,9 @@ export class WorldScene extends Phaser.Scene {
     // Keep the canvas full-screen while zooming the camera out so every world
     // element (player, buildings, trees, paths and props) appears smaller together.
     const getWorldZoom = (): number => {
-      if (window.innerWidth <= 700) return 0.62;
-      if (window.innerHeight <= 520) return 0.66;
-      return 0.74;
+      if (window.innerWidth <= 700) return 0.42;
+      if (window.innerHeight <= 520) return 0.46;
+      return 0.50;
     };
     camera.setZoom(getWorldZoom());
     camera.startFollow(this.player, true);
