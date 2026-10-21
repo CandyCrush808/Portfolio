@@ -28,8 +28,21 @@ export class WorldScene extends Phaser.Scene {
 
     const camera = this.cameras.main;
     camera.setBounds(0, 0, VILLAGE.width, VILLAGE.height);
+    // Keep the canvas full-screen while zooming the camera out so every world
+    // element (player, buildings, trees, paths and props) appears smaller together.
+    const getWorldZoom = (): number => {
+      if (window.innerWidth <= 700) return 0.62;
+      if (window.innerHeight <= 520) return 0.66;
+      return 0.74;
+    };
+    camera.setZoom(getWorldZoom());
     camera.startFollow(this.player, true);
     camera.roundPixels = true;
+    const updateWorldZoom = (): void => camera.setZoom(getWorldZoom());
+    window.addEventListener('resize', updateWorldZoom);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener('resize', updateWorldZoom);
+    });
 
     this.inputController = new InputController(this);
     if(new URLSearchParams(window.location.search).has('debug')){
