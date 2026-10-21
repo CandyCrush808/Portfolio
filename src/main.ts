@@ -1,5 +1,5 @@
 import './ui/styles.css';
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { createGameConfig } from './config/gameConfig';
 import { eventBus, GameEvents } from './core/EventBus';
 import { ResponsiveScaler } from './core/ResponsiveScaler';
