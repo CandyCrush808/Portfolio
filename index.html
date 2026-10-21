@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#17172F" />
+    <meta
+      name="description"
+      content="PixelQuest - a pixel-art RPG portfolio you explore on foot."
+    />
+    <link rel="icon" href="data:," />
+    <title>PixelQuest — My Portfolio Adventure</title>
+  </head>
+  <body>
+    <div id="app">
+      <!-- Game rendering lives here (Phaser canvas only). -->
+      <div id="game-root" aria-label="PixelQuest game"></div>
+
+      <!-- DOM interface layer: HUD, panels, errors. Never rendered by Phaser. -->
+      <div id="ui-root"></div>
+
+      <!-- Static loading screen: visible from first paint, before any JS runs. -->
+      <div id="boot-splash" role="status" aria-live="polite">
+        <div class="splash-card">
+          <h1 class="splash-title">PixelQuest</h1>
+          <p class="splash-subtitle">My Portfolio Adventure</p>
+          <div
+            class="splash-bar"
+            role="progressbar"
+            aria-label="Loading"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+          >
+            <div class="splash-bar-fill"></div>
+          </div>
+          <p class="splash-status" id="splash-status">Loading…</p>
+        </div>
+      </div>
+    </div>
+    <noscript>
+      <p style="color:#FFF0CC;background:#17172F;padding:16px;margin:0">
+        PixelQuest needs JavaScript to run the game.
+      </p>
+    </noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,280 @@
+/* PixelQuest — DOM interface styles. Colour tokens come from docs/design.md. */
+:root {
+  --pq-navy: #17172f;
+  --pq-panel: #222443;
+  --pq-cream: #fff0cc;
+  --pq-gold: #f4c75b;
+  --pq-wood: #69402f;
+  --pq-blue: #69b8f0;
+  --pq-green: #83d17b;
+  --pq-red: #e85d5d;
+  --pq-grass: #75b85a;
+  --pq-path: #b8a58a;
+
+  --pq-space-1: 4px;
+  --pq-space-2: 8px;
+  --pq-space-3: 16px;
+  --pq-space-4: 24px;
+
+  --pq-font-ui: ui-monospace, 'Cascadia Mono', 'Consolas', 'Roboto Mono', monospace;
+  --pq-touch-target: 44px;
+  --pq-safe-top: env(safe-area-inset-top, 0px);
+  --pq-safe-right: env(safe-area-inset-right, 0px);
+  --pq-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --pq-safe-left: env(safe-area-inset-left, 0px);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden; /* the page never scrolls; the game owns the viewport */
+  background: var(--pq-navy);
+  color: var(--pq-cream);
+  font-family: var(--pq-font-ui);
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* ---- Game layer ---------------------------------------------------------- */
+#game-root {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center; /* centres the integer-scaled canvas; leftover is navy */
+  background: var(--pq-navy);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#game-root canvas {
+  display: block;
+  image-rendering: crisp-edges; /* fallback */
+  image-rendering: pixelated; /* nearest-neighbour: never blur pixel art */
+  touch-action: none;
+}
+
+/* ---- DOM UI layer -------------------------------------------------------- */
+#ui-root {
+  position: absolute;
+  inset: 0;
+  pointer-events: none; /* only real controls re-enable pointer events */
+  padding: max(var(--pq-space-2), env(safe-area-inset-top))
+    max(var(--pq-space-2), env(safe-area-inset-right))
+    max(var(--pq-space-2), env(safe-area-inset-bottom))
+    max(var(--pq-space-2), env(safe-area-inset-left));
+}
+
+.pq-hud-top,
+.pq-hud-bottom {
+  position: absolute;
+  left: max(var(--pq-space-2), env(safe-area-inset-left));
+  right: max(var(--pq-space-2), env(safe-area-inset-right));
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--pq-space-2);
+}
+.pq-hud-top {
+  top: max(var(--pq-space-2), env(safe-area-inset-top));
+}
+.pq-hud-bottom {
+  bottom: max(var(--pq-space-2), env(safe-area-inset-bottom));
+  align-items: flex-end;
+}
+
+.pq-chip {
+  background: rgba(34, 36, 67, 0.88);
+  border: 2px solid var(--pq-cream);
+  box-shadow: 0 2px 0 var(--pq-wood);
+  padding: var(--pq-space-1) var(--pq-space-2);
+  font-size: 12px;
+  line-height: 1.4;
+  max-width: min(70vw, 420px);
+}
+.pq-chip strong {
+  color: var(--pq-gold);
+}
+
+.pq-button {
+  pointer-events: auto;
+  min-width: var(--pq-touch-target);
+  min-height: var(--pq-touch-target);
+  padding: var(--pq-space-2) var(--pq-space-3);
+  font: inherit;
+  font-size: 13px;
+  color: var(--pq-cream);
+  background: var(--pq-panel);
+  border: 2px solid var(--pq-cream);
+  box-shadow: 0 2px 0 var(--pq-wood);
+  cursor: pointer;
+}
+.pq-button:hover {
+  border-color: var(--pq-gold);
+}
+.pq-button:active {
+  transform: translateY(2px);
+  box-shadow: none;
+}
+.pq-button[aria-pressed='true'] {
+  border-color: var(--pq-gold);
+  color: var(--pq-gold);
+}
+.pq-button:focus-visible,
+.pq-panel:focus-visible {
+  outline: 3px solid var(--pq-gold);
+  outline-offset: 2px;
+}
+
+/* ---- Asset check panel --------------------------------------------------- */
+.pq-panel {
+  pointer-events: auto;
+  position: absolute;
+  top: calc(var(--pq-touch-target) + var(--pq-space-3) + env(safe-area-inset-top));
+  right: max(var(--pq-space-2), env(safe-area-inset-right));
+  left: max(var(--pq-space-2), env(safe-area-inset-left));
+  max-width: 560px;
+  margin-left: auto;
+  max-height: calc(100% - var(--pq-touch-target) - var(--pq-space-4) * 3);
+  overflow: auto;
+  background: var(--pq-panel);
+  border: 3px double var(--pq-cream);
+  box-shadow: 0 4px 0 var(--pq-wood);
+  padding: var(--pq-space-3);
+  font-size: 12px;
+}
+.pq-panel[hidden] {
+  display: none;
+}
+.pq-panel h2 {
+  margin: 0 0 var(--pq-space-2);
+  font-size: 14px;
+  color: var(--pq-gold);
+}
+.pq-panel ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--pq-space-2);
+}
+.pq-panel li {
+  border-top: 1px solid rgba(255, 240, 204, 0.25);
+  padding-top: var(--pq-space-2);
+  word-break: break-word;
+}
+.pq-status-ok {
+  color: var(--pq-green);
+}
+.pq-status-warn,
+.pq-status-fail {
+  color: var(--pq-red);
+}
+
+/* ---- Loading screen ------------------------------------------------------ */
+#boot-splash {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--pq-navy);
+  transition: opacity 250ms ease;
+  z-index: 20;
+  padding: var(--pq-space-3);
+}
+#boot-splash.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.splash-card {
+  width: min(360px, 100%);
+  text-align: center;
+  background: var(--pq-panel);
+  border: 3px double var(--pq-cream);
+  box-shadow: 0 4px 0 var(--pq-wood);
+  padding: var(--pq-space-4) var(--pq-space-3);
+}
+.splash-title {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: 2px;
+  color: var(--pq-gold);
+}
+.splash-subtitle {
+  margin: var(--pq-space-1) 0 var(--pq-space-3);
+  font-size: 13px;
+}
+.splash-bar {
+  height: 16px;
+  border: 2px solid var(--pq-cream);
+  background: var(--pq-navy);
+  padding: 2px;
+}
+.splash-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--pq-gold);
+}
+.splash-status {
+  margin: var(--pq-space-2) 0 0;
+  font-size: 12px;
+}
+
+/* ---- Fatal error overlay ------------------------------------------------- */
+.pq-error {
+  pointer-events: auto;
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--pq-navy);
+  padding: var(--pq-space-3);
+  z-index: 30;
+}
+.pq-error[hidden] {
+  display: none;
+}
+.pq-error-card {
+  width: min(520px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  background: var(--pq-panel);
+  border: 3px double var(--pq-red);
+  padding: var(--pq-space-4) var(--pq-space-3);
+  font-size: 13px;
+}
+.pq-error-card h2 {
+  margin: 0 0 var(--pq-space-2);
+  color: var(--pq-red);
+  font-size: 18px;
+}
+.pq-error-card ul {
+  padding-left: var(--pq-space-3);
+  word-break: break-word;
+  font-size: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

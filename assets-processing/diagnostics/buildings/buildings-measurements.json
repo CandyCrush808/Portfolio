@@ -1,0 +1,82 @@
+{
+  "source": "Firefly_Gemini Flash_Create a set of separate 2D top-down 16-bit pixel-art RPG building sprites for a cozy 939225.png",
+  "buildings": [
+    {
+      "index": 1,
+      "name": "cottage-green",
+      "bbox": {
+        "x": 87,
+        "y": 30,
+        "w": 245,
+        "h": 329
+      },
+      "opaque_px": 61082,
+      "file": "building-1-cottage-green.png",
+      "status": "extracted-pending-visual-check"
+    },
+    {
+      "index": 2,
+      "name": "forge-red",
+      "bbox": {
+        "x": 530,
+        "y": 26,
+        "w": 341,
+        "h": 346
+      },
+      "opaque_px": 88793,
+      "file": "building-2-forge-red.png",
+      "status": "extracted-pending-visual-check"
+    },
+    {
+      "index": 3,
+      "name": "hall-blue",
+      "bbox": {
+        "x": 980,
+        "y": 21,
+        "w": 354,
+        "h": 356
+      },
+      "opaque_px": 95806,
+      "file": "building-3-hall-blue.png",
+      "status": "extracted-pending-visual-check"
+    },
+    {
+      "index": 4,
+      "name": "house-orange",
+      "bbox": {
+        "x": 151,
+        "y": 405,
+        "w": 192,
+        "h": 319
+      },
+      "opaque_px": 46858,
+      "file": "building-4-house-orange.png",
+      "status": "extracted-pending-visual-check"
+    },
+    {
+      "index": 5,
+      "name": "workshop-slate",
+      "bbox": {
+        "x": 549,
+        "y": 402,
+        "w": 320,
+        "h": 332
+      },
+      "opaque_px": 67209,
+      "status": "needs-manual-mask",
+      "reason": "slate roof luminance overlaps dark checker shade; flood leaks through roof"
+    }
+  ],
+  "info": {
+    "shades": {
+      "dark": 67.63243268881125,
+      "light": 120.53028964320714,
+      "dark_sd": 6.79504447484718,
+      "light_sd": 6.807943149658073
+    },
+    "fringe_px": 0,
+    "speckles_removed": 887,
+    "pocket_px": 11826,
+    "lattice_agreement_min": 0.589
+  }
+}
