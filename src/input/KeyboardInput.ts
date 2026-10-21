@@ -2,13 +2,13 @@ import * as Phaser from 'phaser';
 import { eventBus, GameEvents } from '../core/EventBus';
 
 export class KeyboardInput {
-  private readonly keys: Record<'W'|'A'|'S'|'D'|'UP'|'DOWN'|'LEFT'|'RIGHT'|'E'|'SPACE'|'ESC', Phaser.Input.Keyboard.Key> | null;
+  private readonly keys: Record<'W'|'A'|'S'|'D'|'UP'|'DOWN'|'LEFT'|'RIGHT'|'E'|'SPACE', Phaser.Input.Keyboard.Key> | null;
   private readonly captured: number[];
   private readonly onBlur = (): void => this.reset();
 
   constructor(private readonly scene: Phaser.Scene) {
     const keyboard = scene.input.keyboard;
-    this.keys = keyboard ? keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,E,SPACE,ESC') as typeof this.keys : null;
+    this.keys = keyboard ? keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,E,SPACE') as typeof this.keys : null;
     this.captured = [
       Phaser.Input.Keyboard.KeyCodes.UP, Phaser.Input.Keyboard.KeyCodes.DOWN,
       Phaser.Input.Keyboard.KeyCodes.LEFT, Phaser.Input.Keyboard.KeyCodes.RIGHT,
@@ -24,7 +24,6 @@ export class KeyboardInput {
     if (this.keys) {
       this.keys.E.on('down', () => this.handleActionKey());
       this.keys.SPACE.on('down', () => this.handleActionKey());
-      this.keys.ESC.on('down', () => this.handleEscapeKey());
     }
   }
 
@@ -36,11 +35,6 @@ export class KeyboardInput {
   private handleActionKey(): void {
     if (this.isTyping()) return;
     eventBus.emit(GameEvents.INTERACT_ACTION);
-  }
-
-  private handleEscapeKey(): void {
-    if (this.isTyping()) return;
-    eventBus.emit(GameEvents.OPEN_MODAL, { id: 'pause-toggle' });
   }
 
   getVector(out: Phaser.Math.Vector2): Phaser.Math.Vector2 {
