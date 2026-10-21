@@ -52,15 +52,33 @@ body {
 
 /* ---- Game layer ---------------------------------------------------------- */
 #game-root {
+  /* Keep the playable world framed instead of filling the entire browser. */
   position: absolute;
-  inset: 0;
+  inset: 9% 8%;
   display: grid;
   place-items: center; /* centres the integer-scaled canvas; leftover is navy */
+  overflow: hidden;
+  border: 3px solid rgba(255, 240, 204, 0.7);
+  box-shadow: 0 0 0 6px rgba(34, 36, 67, 0.9), 0 12px 36px rgba(0, 0, 0, 0.28);
   background: var(--pq-navy);
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
+}
+
+@media (max-width: 700px) {
+  #game-root {
+    inset: 12% 3% 15%;
+    border-width: 2px;
+    box-shadow: 0 0 0 3px rgba(34, 36, 67, 0.9), 0 8px 20px rgba(0, 0, 0, 0.25);
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  #game-root {
+    inset: 5% 10%;
+  }
 }
 
 #game-root canvas {
