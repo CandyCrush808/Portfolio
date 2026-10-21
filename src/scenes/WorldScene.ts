@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/constants';
 import { eventBus, GameEvents } from '../core/EventBus';
 import { PlayerController } from '../entities/PlayerController';
