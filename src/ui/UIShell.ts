@@ -179,7 +179,8 @@ export class UIShell {
     this.fsBtn.type = 'button';
     this.fsBtn.title = 'Toggle Fullscreen';
     this.fsBtn.setAttribute('aria-label', 'Toggle Fullscreen');
-    this.fsBtn.addEventListener('click', () => this.toggleFullscreen());
+    this.fsBtn.addEventListener('click', () => { void this.toggleFullscreen(); });
+    document.addEventListener('fullscreenchange', () => this.syncFullscreenButton());
 
     this.assetBtn = el('button', 'pq-hud-btn', '📦');
     this.assetBtn.type = 'button';
@@ -307,9 +308,24 @@ export class UIShell {
       this.errorOverlay,
     );
 
-    // Global keyboard listener for modal / dialogue dismissal & shortcuts
+    // Capture UI shortcuts before Phaser handles them, avoiding duplicate actions.
     window.addEventListener('keydown', (event) => {
+      const active = document.activeElement;
+      const isTyping = active instanceof HTMLInputElement ||
+        active instanceof HTMLTextAreaElement ||
+        (active instanceof HTMLElement && active.isContentEditable);
+      if (isTyping) return;
+
+      if (!this.dialogueBox.hidden && (event.key === 'e' || event.key === 'E' || event.key === ' ' || event.code === 'Space')) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        this.advanceDialogue();
+        return;
+      }
+
       if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopImmediatePropagation();
         if (!this.dialogueBox.hidden) {
           this.closeDialogue();
         } else if (this.activeModalId) {
@@ -320,12 +336,10 @@ export class UIShell {
           this.openModal('pause');
         }
       } else if (event.key === 'm' || event.key === 'M') {
-        const active = document.activeElement;
-        if (!(active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement)) {
-          this.toggleSound();
-        }
+        event.preventDefault();
+        this.toggleSound();
       }
-    });
+    }, true);
   }
 
   bind(): void {
@@ -338,7 +352,7 @@ export class UIShell {
     eventBus.on(GameEvents.INTERACTION_HINT, this.onInteractionHint, this);
     eventBus.on(GameEvents.START_DIALOGUE, this.onStartDialogue, this);
     eventBus.on(GameEvents.OPEN_MODAL, this.onOpenModalEvent, this);
-    eventBus.on(GameEvents.CLOSE_MODAL, this.closeModal, this);
+    eventBus.on(GameEvents.INTERACT_ACTION, this.onInteractAction, this);
     eventBus.on(GameEvents.OBJECTIVE_COMPLETED, this.onObjectiveCompleted, this);
   }
 
@@ -523,6 +537,12 @@ export class UIShell {
   // ---------------------------------------------------------------------------
   // Dialogue System
   // ---------------------------------------------------------------------------
+  private onInteractAction(): void {
+    // While dialogue is active, the same action button/key advances dialogue;
+    // WorldScene ignores ordinary interactions while the player is frozen.
+    if (!this.dialogueBox.hidden) this.advanceDialogue();
+  }
+
   private onStartDialogue(payload: { lines: DialogueLine[] }): void {
     if (!payload.lines || payload.lines.length === 0) return;
     this.dialogueQueue = payload.lines;
@@ -603,6 +623,7 @@ export class UIShell {
   }
 
   openModal(id: string, extraParam?: string): void {
+    eventBus.emit(GameEvents.PAUSE_GAME, { paused: true });
     soundEffects.playOpen();
     this.activeModalId = id;
     this.modalContainer.replaceChildren();
@@ -646,7 +667,7 @@ export class UIShell {
     this.modalBackdrop.hidden = true;
     this.activeModalId = null;
     this.modalContainer.replaceChildren();
-    eventBus.emit(GameEvents.CLOSE_MODAL);
+    eventBus.emit(GameEvents.PAUSE_GAME, { paused: false });
   }
 
   // A. Portfolio / Projects Modal
@@ -1188,14 +1209,29 @@ export class UIShell {
     eventBus.emit(GameEvents.SOUND_TOGGLE, { muted: isMuted });
   }
 
-  private toggleFullscreen(): void {
+  private syncFullscreenButton(): void {
+    const isFullscreen = Boolean(document.fullscreenElement);
+    this.fsBtn.textContent = isFullscreen ? '✕' : '⛶';
+    this.fsBtn.setAttribute('aria-label', isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen');
+    this.fsBtn.title = isFullscreen ? 'Exit Fullscreen' : 'Toggle Fullscreen';
+  }
+
+  private async toggleFullscreen(): Promise<void> {
     soundEffects.playInteract();
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-      this.fsBtn.textContent = '✕';
-    } else {
-      document.exitFullscreen().catch(() => {});
-      this.fsBtn.textContent = '⛶';
+    try {
+      if (!document.fullscreenElement) {
+        if (!document.documentElement.requestFullscreen) {
+          this.showToast('Fullscreen is not supported by this browser.');
+          return;
+        }
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+      this.syncFullscreenButton();
+    } catch {
+      this.syncFullscreenButton();
+      this.showToast('Could not change fullscreen mode. Check browser permissions.');
     }
   }
 
@@ -1248,6 +1284,8 @@ export class UIShell {
   }
 
   showFatalError(payload: FatalErrorPayload): void {
+    window.clearInterval(this.loadingMsgInterval);
+    window.clearInterval(this.typewriterTimer);
     this.hideSplash(true);
     this.errorTitle.textContent = payload.title;
     this.errorMessage.textContent = payload.message;
