@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { NAVY_CSS } from './constants';
 import type { ViewportInfo } from '../core/ResponsiveScaler';
 import { BootScene } from '../scenes/BootScene';
