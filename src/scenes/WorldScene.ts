@@ -264,7 +264,9 @@ export class WorldScene extends Phaser.Scene {
     };
 
     const onDialogueClosed = (): void => {
-      this.player.setFrozen(false);
+      // Defer unfreezing until the current INTERACT_ACTION event has finished
+      // dispatching, otherwise the same input can immediately retrigger the NPC.
+      this.time.delayedCall(0, () => this.player.setFrozen(false));
     };
 
     const onOpenModal = (payload: { id: string }): void => {
