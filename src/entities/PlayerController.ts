@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { PLAYER } from '../config/constants';
 import { Facing, PlayerAnimations } from './PlayerAnimations';
 
