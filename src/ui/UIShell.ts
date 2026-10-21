@@ -5,6 +5,14 @@ import {
   GameEvents,
   type ViewportInfo,
 } from '../core/EventBus';
+import {
+  DEVELOPER_PROFILE,
+  PROJECTS,
+  SKILL_CATEGORIES,
+  QUEST_OBJECTIVES,
+  type QuestObjective,
+} from '../data/portfolioData';
+import { soundEffects } from '../audio/SoundEffects';
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -13,14 +21,24 @@ function el<K extends keyof HTMLElementTagNameMap>(
 ): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
   if (className) node.className = className;
-  // textContent only: never inject strings as HTML.
   if (text !== undefined) node.textContent = text;
   return node;
 }
 
+interface DialogueLine {
+  speaker: string;
+  title?: string;
+  avatarKey?: string;
+  text: string;
+}
+
 /**
- * DOM interface layer: loading screen, HUD, asset-check panel and error
- * screen. It talks to the game only through the event bus.
+ * Complete polished DOM interface layer:
+ * - Boot loading & welcome title screen
+ * - Top & bottom in-game HUD (Identity, Location, Controls, Objectives, Contextual Prompt)
+ * - Retro RPG typewriter dialogue window
+ * - Full-featured portfolio modals (Projects, Skills, About, Contact, Help, Pause)
+ * - Toast notification banner
  */
 export class UIShell {
   private readonly splash: HTMLElement | null;
@@ -28,17 +46,70 @@ export class UIShell {
   private readonly splashStatus: HTMLElement | null;
   private readonly splashBar: HTMLElement | null;
 
+  // Title / Welcome Screen
+  private readonly welcomeScreen: HTMLElement;
+
+  // In-Game HUD Elements
   private readonly hud: HTMLElement;
-  private readonly readout: HTMLElement;
-  private readonly assetButton: HTMLButtonElement;
+  private readonly identityPanel: HTMLElement;
+  private readonly locationBadge: HTMLElement;
+  private readonly controlsBar: HTMLElement;
+  private readonly soundBtn: HTMLButtonElement;
+  private readonly helpBtn: HTMLButtonElement;
+  private readonly pauseBtn: HTMLButtonElement;
+  private readonly fsBtn: HTMLButtonElement;
+  private readonly assetBtn: HTMLButtonElement;
+
+  private readonly questPanel: HTMLElement;
+  private readonly questList: HTMLElement;
+  private readonly questToggleBtn: HTMLButtonElement;
+
+  private readonly interactPrompt: HTMLElement;
+  private readonly interactText: HTMLElement;
+  private readonly interactKey: HTMLElement;
+
+  // Modal Overlay & Containers
+  private readonly modalBackdrop: HTMLElement;
+  private readonly modalContainer: HTMLElement;
+  private activeModalId: string | null = null;
+
+  // Dialogue Overlay
+  private readonly dialogueBox: HTMLElement;
+  private readonly dialogueSpeaker: HTMLElement;
+  private readonly dialogueTitle: HTMLElement;
+  private readonly dialogueText: HTMLElement;
+  private readonly dialogueContinue: HTMLButtonElement;
+  private dialogueQueue: DialogueLine[] = [];
+  private currentDialogueIndex = 0;
+  private typewriterTimer = 0;
+  private isTypingDialogue = false;
+
+  // Toast Notifications
+  private readonly toastContainer: HTMLElement;
+
+  // Asset Inspection (preserved from initial audit)
   private readonly assetPanel: HTMLElement;
   private readonly assetList: HTMLElement;
+
+  // Error overlay
   private readonly errorOverlay: HTMLElement;
   private readonly errorTitle: HTMLElement;
   private readonly errorMessage: HTMLElement;
   private readonly errorDetails: HTMLElement;
 
+  // State
   private gameReady = false;
+  private adventureStarted = false;
+  private objectives: QuestObjective[] = JSON.parse(JSON.stringify(QUEST_OBJECTIVES));
+  private loadingMessages = [
+    'Preparing your adventure…',
+    'Assembling 16-bit village paths…',
+    'Tuning retro synthesizers…',
+    'Lighting village lanterns…',
+    'Ready to explore!',
+  ];
+  private currentLoadingMsgIndex = 0;
+  private loadingMsgInterval = 0;
 
   constructor(private readonly root: HTMLElement) {
     this.splash = document.getElementById('boot-splash');
@@ -46,66 +117,214 @@ export class UIShell {
     this.splashBar = this.splash?.querySelector<HTMLElement>('.splash-bar') ?? null;
     this.splashStatus = document.getElementById('splash-status');
 
-    // ---- HUD (hidden until the game is ready) ----
-    this.hud = el('div');
+    this.startLoadingMessageCycle();
+
+    // 1. Toast Notification Container
+    this.toastContainer = el('div', 'pq-toast-container');
+
+    // 2. Welcome / Title Screen
+    this.welcomeScreen = this.buildWelcomeScreen();
+
+    // 3. In-Game HUD
+    this.hud = el('div', 'pq-hud');
     this.hud.hidden = true;
 
-    const top = el('div', 'pq-hud-top');
-    const title = el('div', 'pq-chip');
-    const coarse = window.matchMedia('(pointer: coarse)').matches;
-    title.append(
-      el('strong', undefined, 'PixelQuest'),
-      document.createTextNode(' · Phase 1 test scene'),
-      document.createElement('br'),
-      document.createTextNode(
-        coarse ? 'Touch and hold to steer' : 'Move: WASD / arrows, or hold the mouse to steer',
-      ),
-    );
+    // Top-Left: Identity
+    this.identityPanel = el('div', 'pq-identity');
+    const avatar = el('div', 'pq-avatar');
+    avatar.setAttribute('aria-hidden', 'true');
+    const avatarInner = el('span', 'pq-avatar-img', '🧙‍♂️');
+    avatar.appendChild(avatarInner);
 
-    this.assetButton = el('button', 'pq-button', 'Assets');
-    this.assetButton.type = 'button';
-    this.assetButton.setAttribute('aria-pressed', 'false');
-    this.assetButton.setAttribute('aria-controls', 'asset-panel');
-    this.assetButton.addEventListener('click', () => this.toggleAssetPanel());
-    top.append(title, this.assetButton);
+    const identityText = el('div', 'pq-identity-text');
+    const nameLine = el('div', 'pq-identity-name', DEVELOPER_PROFILE.name);
+    const roleLine = el('div', 'pq-identity-role', DEVELOPER_PROFILE.role);
+    const statusLine = el('div', 'pq-identity-status');
+    const statusDot = el('span', 'pq-status-dot');
+    const statusLabel = el('span', undefined, 'Online • Exploring');
+    statusLine.append(statusDot, statusLabel);
+    identityText.append(nameLine, roleLine, statusLine);
 
-    const bottom = el('div', 'pq-hud-bottom');
-    this.readout = el('div', 'pq-chip', '');
-    this.readout.setAttribute('aria-label', 'Viewport information');
-    bottom.append(this.readout);
+    this.identityPanel.append(avatar, identityText);
+    this.identityPanel.title = 'Click to view About Cottage';
+    this.identityPanel.addEventListener('click', () => this.openModal('about'));
 
+    // Top-Center: Location Badge
+    this.locationBadge = el('div', 'pq-location-badge');
+    const locIcon = el('span', 'pq-loc-icon', '🧭');
+    const locText = el('span', 'pq-loc-text', 'MAIN PLAZA');
+    this.locationBadge.append(locIcon, locText);
+
+    // Top-Right: Game Controls
+    this.controlsBar = el('div', 'pq-controls-bar');
+    this.soundBtn = el('button', 'pq-hud-btn', soundEffects.isMuted ? '🔇' : '🔊');
+    this.soundBtn.type = 'button';
+    this.soundBtn.title = 'Toggle Sound (M)';
+    this.soundBtn.setAttribute('aria-label', 'Toggle Sound');
+    this.soundBtn.addEventListener('click', () => this.toggleSound());
+
+    this.helpBtn = el('button', 'pq-hud-btn', '❓');
+    this.helpBtn.type = 'button';
+    this.helpBtn.title = 'How to Play / Controls';
+    this.helpBtn.setAttribute('aria-label', 'How to Play');
+    this.helpBtn.addEventListener('click', () => this.openModal('help'));
+
+    this.pauseBtn = el('button', 'pq-hud-btn', '⏸');
+    this.pauseBtn.type = 'button';
+    this.pauseBtn.title = 'Pause Menu (Esc)';
+    this.pauseBtn.setAttribute('aria-label', 'Pause Menu');
+    this.pauseBtn.addEventListener('click', () => this.openModal('pause'));
+
+    this.fsBtn = el('button', 'pq-hud-btn', '⛶');
+    this.fsBtn.type = 'button';
+    this.fsBtn.title = 'Toggle Fullscreen';
+    this.fsBtn.setAttribute('aria-label', 'Toggle Fullscreen');
+    this.fsBtn.addEventListener('click', () => this.toggleFullscreen());
+
+    this.assetBtn = el('button', 'pq-hud-btn', '📦');
+    this.assetBtn.type = 'button';
+    this.assetBtn.title = 'Audit Assets';
+    this.assetBtn.setAttribute('aria-label', 'Audit Assets');
+    this.assetBtn.addEventListener('click', () => this.toggleAssetPanel());
+
+    this.controlsBar.append(this.soundBtn, this.helpBtn, this.pauseBtn, this.fsBtn, this.assetBtn);
+
+    const hudTop = el('div', 'pq-hud-top');
+    hudTop.append(this.identityPanel, this.locationBadge, this.controlsBar);
+
+    // Bottom-Left: Quest / Objectives Panel
+    this.questPanel = el('div', 'pq-quest-panel');
+    const questHeader = el('div', 'pq-quest-header');
+    const questTitle = el('div', 'pq-quest-title', '📜 QUEST LOG');
+    this.questToggleBtn = el('button', 'pq-quest-toggle', '−');
+    this.questToggleBtn.type = 'button';
+    this.questToggleBtn.setAttribute('aria-label', 'Toggle Quest Log');
+    this.questToggleBtn.addEventListener('click', () => this.toggleQuestPanel());
+    questHeader.append(questTitle, this.questToggleBtn);
+
+    this.questList = el('ul', 'pq-quest-list');
+    this.renderObjectives();
+    this.questPanel.append(questHeader, this.questList);
+
+    // Bottom-Center: Contextual Interaction Prompt
+    this.interactPrompt = el('div', 'pq-interact-prompt');
+    this.interactPrompt.hidden = true;
+    const promptBadge = el('div', 'pq-prompt-inner');
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+    this.interactKey = el('kbd', 'pq-prompt-key', isTouch ? 'TAP' : 'E');
+    this.interactText = el('span', 'pq-prompt-text', 'Interact');
+    promptBadge.append(this.interactKey, this.interactText);
+    this.interactPrompt.append(promptBadge);
+    this.interactPrompt.addEventListener('click', () => {
+      soundEffects.playInteract();
+      eventBus.emit(GameEvents.INTERACT_ACTION);
+    });
+
+    const hudBottom = el('div', 'pq-hud-bottom');
+    hudBottom.append(this.questPanel, this.interactPrompt);
+
+    this.hud.append(hudTop, hudBottom);
+
+    // 4. Dialogue Box
+    this.dialogueBox = el('div', 'pq-dialogue');
+    this.dialogueBox.hidden = true;
+    const dCard = el('div', 'pq-dialogue-card');
+
+    const dHeader = el('div', 'pq-dialogue-header');
+    const dPortrait = el('div', 'pq-dialogue-portrait', '🧙‍♂️');
+    const dSpeakerInfo = el('div', 'pq-dialogue-info');
+    this.dialogueSpeaker = el('div', 'pq-dialogue-name', 'Rowan');
+    this.dialogueTitle = el('div', 'pq-dialogue-title', 'Village Guide');
+    dSpeakerInfo.append(this.dialogueSpeaker, this.dialogueTitle);
+    const dClose = el('button', 'pq-dialogue-close', '✕');
+    dClose.type = 'button';
+    dClose.setAttribute('aria-label', 'Close Dialogue');
+    dClose.addEventListener('click', () => this.closeDialogue());
+    dHeader.append(dPortrait, dSpeakerInfo, dClose);
+
+    this.dialogueText = el('div', 'pq-dialogue-text');
+    const dFooter = el('div', 'pq-dialogue-footer');
+    this.dialogueContinue = el('button', 'pq-btn pq-btn-gold', 'Continue ▶');
+    this.dialogueContinue.type = 'button';
+    this.dialogueContinue.addEventListener('click', () => this.advanceDialogue());
+    dFooter.append(this.dialogueContinue);
+
+    dCard.append(dHeader, this.dialogueText, dFooter);
+    this.dialogueBox.append(dCard);
+    // Clicking card advances dialogue or skips typewriter
+    dCard.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).tagName !== 'BUTTON') {
+        this.advanceDialogue();
+      }
+    });
+
+    // 5. Modal Backdrop & Container
+    this.modalBackdrop = el('div', 'pq-modal-backdrop');
+    this.modalBackdrop.hidden = true;
+    this.modalContainer = el('div', 'pq-modal-container');
+    this.modalBackdrop.append(this.modalContainer);
+    this.modalBackdrop.addEventListener('click', (e) => {
+      if (e.target === this.modalBackdrop) {
+        this.closeModal();
+      }
+    });
+
+    // 6. Asset Panel (audited asset viewer)
     this.assetPanel = el('section', 'pq-panel');
     this.assetPanel.id = 'asset-panel';
     this.assetPanel.hidden = true;
     this.assetPanel.tabIndex = -1;
     this.assetPanel.setAttribute('aria-label', 'Loaded assets');
-    const panelTitle = el('h2', undefined, 'Asset check');
+    const panelTitle = el('h2', undefined, 'Asset Audit Report');
     this.assetList = el('ul');
-    const close = el('button', 'pq-button', 'Close');
-    close.type = 'button';
-    close.addEventListener('click', () => this.toggleAssetPanel(false));
-    this.assetPanel.append(panelTitle, this.assetList, close);
+    const closeAssetBtn = el('button', 'pq-btn', 'Close');
+    closeAssetBtn.type = 'button';
+    closeAssetBtn.addEventListener('click', () => this.toggleAssetPanel(false));
+    this.assetPanel.append(panelTitle, this.assetList, closeAssetBtn);
 
-    this.hud.append(top, bottom, this.assetPanel);
-
-    // ---- Error overlay ----
+    // 7. Error Overlay
     this.errorOverlay = el('div', 'pq-error');
     this.errorOverlay.hidden = true;
     this.errorOverlay.setAttribute('role', 'alert');
-    const card = el('div', 'pq-error-card');
+    const errorCard = el('div', 'pq-error-card');
     this.errorTitle = el('h2');
     this.errorMessage = el('p');
     this.errorDetails = el('ul');
-    const reload = el('button', 'pq-button', 'Reload');
+    const reload = el('button', 'pq-btn', 'Reload');
     reload.type = 'button';
     reload.addEventListener('click', () => window.location.reload());
-    card.append(this.errorTitle, this.errorMessage, this.errorDetails, reload);
-    this.errorOverlay.append(card);
+    errorCard.append(this.errorTitle, this.errorMessage, this.errorDetails, reload);
+    this.errorOverlay.append(errorCard);
 
-    this.root.append(this.hud, this.errorOverlay);
+    // Append everything to root
+    this.root.append(
+      this.welcomeScreen,
+      this.hud,
+      this.dialogueBox,
+      this.modalBackdrop,
+      this.assetPanel,
+      this.toastContainer,
+      this.errorOverlay,
+    );
 
+    // Global keyboard listener for modal / dialogue dismissal & shortcuts
     window.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && !this.assetPanel.hidden) this.toggleAssetPanel(false);
+      if (event.key === 'Escape') {
+        if (!this.dialogueBox.hidden) {
+          this.closeDialogue();
+        } else if (this.activeModalId) {
+          this.closeModal();
+        } else if (!this.assetPanel.hidden) {
+          this.toggleAssetPanel(false);
+        } else if (this.gameReady && this.adventureStarted) {
+          this.openModal('pause');
+        }
+      } else if (event.key === 'm' || event.key === 'M') {
+        const active = document.activeElement;
+        if (!(active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement)) {
+          this.toggleSound();
+        }
+      }
     });
   }
 
@@ -115,27 +334,878 @@ export class UIShell {
     eventBus.on(GameEvents.GAME_READY, this.onGameReady, this);
     eventBus.on(GameEvents.VIEWPORT_CHANGED, this.onViewport, this);
     eventBus.on(GameEvents.FATAL_ERROR, this.showFatalError, this);
+    eventBus.on(GameEvents.ZONE_CHANGED, this.onZoneChanged, this);
+    eventBus.on(GameEvents.INTERACTION_HINT, this.onInteractionHint, this);
+    eventBus.on(GameEvents.START_DIALOGUE, this.onStartDialogue, this);
+    eventBus.on(GameEvents.OPEN_MODAL, this.onOpenModalEvent, this);
+    eventBus.on(GameEvents.CLOSE_MODAL, this.closeModal, this);
+    eventBus.on(GameEvents.OBJECTIVE_COMPLETED, this.onObjectiveCompleted, this);
   }
 
   get isGameReady(): boolean {
     return this.gameReady;
   }
 
-  showFatalError(payload: FatalErrorPayload): void {
-    this.hideSplash(true);
-    this.errorTitle.textContent = payload.title;
-    this.errorMessage.textContent = payload.message;
-    this.errorDetails.replaceChildren(
-      ...(payload.details ?? []).map((line) => el('li', undefined, line)),
+  // ---------------------------------------------------------------------------
+  // Welcome / Title Screen
+  // ---------------------------------------------------------------------------
+  private buildWelcomeScreen(): HTMLElement {
+    const screen = el('div', 'pq-welcome-screen');
+    screen.hidden = true;
+
+    const card = el('div', 'pq-welcome-card');
+
+    const badge = el('div', 'pq-welcome-badge', '★ RETRO RPG PORTFOLIO ★');
+    const title = el('h1', 'pq-welcome-title', 'PixelQuest');
+    const subtitle = el('p', 'pq-welcome-subtitle', 'An Interactive Portfolio Adventure');
+
+    const descBox = el('div', 'pq-welcome-desc');
+    descBox.append(
+      el('p', undefined, 'Step into an explorable 16-bit village crafted with Phaser 3, TypeScript, and modern web UI.'),
+      el('p', 'pq-welcome-instruction', 'Explore the world • Meet the characters • Discover the work'),
     );
-    this.errorOverlay.hidden = false;
+
+    const controlsTip = el('div', 'pq-welcome-controls');
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+    controlsTip.textContent = isTouch
+      ? '📱 Touch D-pad to move, tap Action button or doors to interact'
+      : '⌨ Move with WASD or Arrows • Press E or Space to interact';
+
+    const btnRow = el('div', 'pq-welcome-actions');
+    const startBtn = el('button', 'pq-btn pq-btn-gold pq-btn-large', 'START ADVENTURE ▶');
+    startBtn.type = 'button';
+    startBtn.addEventListener('click', () => this.startAdventure());
+
+    const howBtn = el('button', 'pq-btn pq-btn-secondary', 'HOW TO PLAY');
+    howBtn.type = 'button';
+    howBtn.addEventListener('click', () => this.openModal('help'));
+
+    btnRow.append(startBtn, howBtn);
+
+    const metaRow = el('div', 'pq-welcome-meta');
+    const authorSpan = el('span', undefined, `Created by ${DEVELOPER_PROFILE.name}`);
+    const soundToggle = el('button', 'pq-welcome-sound-toggle', soundEffects.isMuted ? '🔇 Sound: Off' : '🔊 Sound: On');
+    soundToggle.type = 'button';
+    soundToggle.addEventListener('click', () => {
+      this.toggleSound();
+      soundToggle.textContent = soundEffects.isMuted ? '🔇 Sound: Off' : '🔊 Sound: On';
+    });
+    metaRow.append(authorSpan, soundToggle);
+
+    card.append(badge, title, subtitle, descBox, controlsTip, btnRow, metaRow);
+    screen.append(card);
+    return screen;
+  }
+
+  private startAdventure(): void {
+    soundEffects.playStart();
+    this.adventureStarted = true;
+    this.welcomeScreen.classList.add('is-hidden');
+    window.setTimeout(() => {
+      this.welcomeScreen.hidden = true;
+    }, 350);
+
+    this.hud.hidden = false;
+    this.showToast('⚔ Welcome to Pixel Town! Explore the village square.');
+    eventBus.emit(GameEvents.CLOSE_MODAL);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Loading & Boot
+  // ---------------------------------------------------------------------------
+  private startLoadingMessageCycle(): void {
+    this.loadingMsgInterval = window.setInterval(() => {
+      this.currentLoadingMsgIndex = (this.currentLoadingMsgIndex + 1) % this.loadingMessages.length;
+      if (this.splashStatus) {
+        this.splashStatus.textContent = this.loadingMessages[this.currentLoadingMsgIndex]!;
+      }
+    }, 1200);
   }
 
   private onProgress(value: number): void {
-    const percent = Math.round(value * 100);
+    const percent = Math.min(100, Math.round(value * 100));
     if (this.splashFill) this.splashFill.style.width = `${percent}%`;
     this.splashBar?.setAttribute('aria-valuenow', String(percent));
-    if (this.splashStatus) this.splashStatus.textContent = `Loading… ${percent}%`;
+    if (this.splashStatus) {
+      this.splashStatus.textContent = `Loading assets… ${percent}%`;
+    }
+  }
+
+  private onGameReady(): void {
+    window.clearInterval(this.loadingMsgInterval);
+    this.gameReady = true;
+    this.hideSplash(false);
+
+    // Show welcome title screen on first boot
+    this.welcomeScreen.hidden = false;
+  }
+
+  private hideSplash(immediately: boolean): void {
+    if (!this.splash) return;
+    const splash = this.splash;
+    splash.classList.add('is-hidden');
+    if (immediately) {
+      splash.hidden = true;
+    } else {
+      window.setTimeout(() => {
+        splash.hidden = true;
+      }, 400);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // In-Game HUD Updates
+  // ---------------------------------------------------------------------------
+  private onZoneChanged(payload: { zoneId: string; label: string }): void {
+    const locText = this.locationBadge.querySelector<HTMLElement>('.pq-loc-text');
+    const locIcon = this.locationBadge.querySelector<HTMLElement>('.pq-loc-icon');
+    if (locText) {
+      locText.textContent = payload.label;
+    }
+    if (locIcon) {
+      const icons: Record<string, string> = {
+        portfolio: '✦',
+        skills: '⚔',
+        about: '📜',
+        contact: '✉',
+        pond: '⛲',
+        plaza: '🧭',
+      };
+      locIcon.textContent = icons[payload.zoneId] ?? '🌲';
+    }
+
+    // Gentle pulse animation on location badge
+    this.locationBadge.classList.remove('is-pulsing');
+    void this.locationBadge.offsetWidth; // trigger reflow
+    this.locationBadge.classList.add('is-pulsing');
+  }
+
+  private onInteractionHint(payload: { text: string | null; key: string } | null): void {
+    if (payload && payload.text) {
+      const isTouch = window.matchMedia('(pointer: coarse)').matches;
+      this.interactKey.textContent = isTouch ? 'TAP' : 'E';
+      this.interactText.textContent = payload.text;
+      this.interactPrompt.hidden = false;
+    } else {
+      this.interactPrompt.hidden = true;
+    }
+  }
+
+  private toggleQuestPanel(): void {
+    soundEffects.playInteract();
+    const isCollapsed = this.questList.classList.toggle('is-collapsed');
+    this.questToggleBtn.textContent = isCollapsed ? '+' : '−';
+  }
+
+  private renderObjectives(): void {
+    this.questList.replaceChildren(
+      ...this.objectives.map((obj) => {
+        const li = el('li', `pq-quest-item ${obj.completed ? 'is-completed' : ''}`);
+        const check = el('span', 'pq-quest-check', obj.completed ? '✓' : '○');
+        const textSpan = el('span', 'pq-quest-name', obj.title);
+        li.append(check, textSpan);
+        li.title = obj.description;
+        return li;
+      }),
+    );
+  }
+
+  private onObjectiveCompleted(payload: { id: string; title: string }): void {
+    const target = this.objectives.find((o) => o.id === payload.id);
+    if (target && !target.completed) {
+      target.completed = true;
+      this.renderObjectives();
+      soundEffects.playSuccess();
+      this.showToast(`✦ Quest Completed: ${target.title}!`);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dialogue System
+  // ---------------------------------------------------------------------------
+  private onStartDialogue(payload: { lines: DialogueLine[] }): void {
+    if (!payload.lines || payload.lines.length === 0) return;
+    this.dialogueQueue = payload.lines;
+    this.currentDialogueIndex = 0;
+    this.dialogueBox.hidden = false;
+    this.showDialogueLine(this.dialogueQueue[0]!);
+  }
+
+  private showDialogueLine(line: DialogueLine): void {
+    this.dialogueSpeaker.textContent = line.speaker;
+    this.dialogueTitle.textContent = line.title ?? '';
+    this.dialogueText.textContent = '';
+    this.isTypingDialogue = true;
+
+    window.clearInterval(this.typewriterTimer);
+    let charIdx = 0;
+    const fullText = line.text;
+
+    this.typewriterTimer = window.setInterval(() => {
+      if (charIdx < fullText.length) {
+        this.dialogueText.textContent += fullText[charIdx];
+        if (charIdx % 3 === 0) {
+          soundEffects.playDialogueBlip();
+        }
+        charIdx++;
+      } else {
+        window.clearInterval(this.typewriterTimer);
+        this.isTypingDialogue = false;
+      }
+    }, 22);
+
+    const isLast = this.currentDialogueIndex >= this.dialogueQueue.length - 1;
+    this.dialogueContinue.textContent = isLast ? 'Done ✕' : 'Continue ▶';
+  }
+
+  private advanceDialogue(): void {
+    if (this.isTypingDialogue) {
+      // Instant reveal
+      window.clearInterval(this.typewriterTimer);
+      const currentLine = this.dialogueQueue[this.currentDialogueIndex];
+      if (currentLine) {
+        this.dialogueText.textContent = currentLine.text;
+      }
+      this.isTypingDialogue = false;
+      return;
+    }
+
+    this.currentDialogueIndex++;
+    if (this.currentDialogueIndex < this.dialogueQueue.length) {
+      soundEffects.playInteract();
+      this.showDialogueLine(this.dialogueQueue[this.currentDialogueIndex]!);
+    } else {
+      this.closeDialogue();
+    }
+  }
+
+  private closeDialogue(): void {
+    window.clearInterval(this.typewriterTimer);
+    this.dialogueBox.hidden = true;
+    this.isTypingDialogue = false;
+    soundEffects.playClose();
+    eventBus.emit(GameEvents.DIALOGUE_CLOSED);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Modals (Portfolio, Skills, About, Contact, Help, Pause)
+  // ---------------------------------------------------------------------------
+  private onOpenModalEvent(payload: { id: string; projectId?: string }): void {
+    if (payload.id === 'pause-toggle') {
+      if (this.activeModalId === 'pause') {
+        this.closeModal();
+      } else {
+        this.openModal('pause');
+      }
+      return;
+    }
+    this.openModal(payload.id, payload.projectId);
+  }
+
+  openModal(id: string, extraParam?: string): void {
+    soundEffects.playOpen();
+    this.activeModalId = id;
+    this.modalContainer.replaceChildren();
+
+    switch (id) {
+      case 'portfolio':
+        this.renderPortfolioModal();
+        break;
+      case 'project-detail':
+        this.renderProjectDetailModal(extraParam);
+        break;
+      case 'skills':
+        this.renderSkillsModal();
+        break;
+      case 'about':
+        this.renderAboutModal();
+        break;
+      case 'contact':
+        this.renderContactModal();
+        break;
+      case 'help':
+        this.renderHelpModal();
+        break;
+      case 'pause':
+        this.renderPauseModal();
+        break;
+      default:
+        this.closeModal();
+        return;
+    }
+
+    this.modalBackdrop.hidden = false;
+    this.modalContainer.tabIndex = -1;
+    this.modalContainer.focus();
+  }
+
+  closeModal(): void {
+    if (!this.modalBackdrop.hidden) {
+      soundEffects.playClose();
+    }
+    this.modalBackdrop.hidden = true;
+    this.activeModalId = null;
+    this.modalContainer.replaceChildren();
+    eventBus.emit(GameEvents.CLOSE_MODAL);
+  }
+
+  // A. Portfolio / Projects Modal
+  private renderPortfolioModal(filter = 'All'): void {
+    const card = el('div', 'pq-modal-card pq-modal-wide');
+
+    const header = el('div', 'pq-modal-header');
+    const titleBox = el('div');
+    titleBox.append(
+      el('span', 'pq-modal-kicker', '✦ PROJECTS WORKSHOP ✦'),
+      el('h2', 'pq-modal-title', 'Portfolio Hall'),
+    );
+    const closeBtn = el('button', 'pq-modal-close', '✕');
+    closeBtn.type = 'button';
+    closeBtn.setAttribute('aria-label', 'Close Projects Modal');
+    closeBtn.addEventListener('click', () => this.closeModal());
+    header.append(titleBox, closeBtn);
+
+    // Filter Buttons
+    const filterRow = el('div', 'pq-filter-row');
+    const categories = ['All', 'Game Dev', 'Full-Stack', 'Tools'];
+    categories.forEach((cat) => {
+      const btn = el('button', `pq-filter-btn ${cat === filter ? 'is-active' : ''}`, cat);
+      btn.type = 'button';
+      btn.addEventListener('click', () => {
+        soundEffects.playInteract();
+        this.renderPortfolioModal(cat);
+      });
+      filterRow.append(btn);
+    });
+
+    const grid = el('div', 'pq-projects-grid');
+    const filteredProjects =
+      filter === 'All' ? PROJECTS : PROJECTS.filter((p) => p.category === filter);
+
+    filteredProjects.forEach((proj) => {
+      const item = el('article', 'pq-project-card');
+
+      const thumb = el('div', 'pq-project-thumb');
+      thumb.style.backgroundColor = proj.imagePlaceholderColor || '#222443';
+      const badge = el('span', 'pq-project-cat', proj.category);
+      const icon = el('span', 'pq-project-icon', proj.category === 'Game Dev' ? '🎮' : proj.category === 'Full-Stack' ? '🌐' : '⚙');
+      thumb.append(badge, icon);
+
+      const body = el('div', 'pq-project-body');
+      const h3 = el('h3', 'pq-project-title', proj.title);
+      const desc = el('p', 'pq-project-desc', proj.shortDescription);
+
+      const techList = el('div', 'pq-tech-pills');
+      proj.technologies.slice(0, 4).forEach((tech) => {
+        techList.append(el('span', 'pq-tech-pill', tech));
+      });
+
+      const actions = el('div', 'pq-project-actions');
+      const detailsBtn = el('button', 'pq-btn pq-btn-gold pq-btn-sm', 'View Details');
+      detailsBtn.type = 'button';
+      detailsBtn.addEventListener('click', () => this.openModal('project-detail', proj.id));
+      actions.append(detailsBtn);
+
+      if (proj.githubUrl) {
+        const gh = el('a', 'pq-btn pq-btn-sm', 'GitHub');
+        gh.href = proj.githubUrl;
+        gh.target = '_blank';
+        gh.rel = 'noopener noreferrer';
+        actions.append(gh);
+      }
+      if (proj.liveUrl && proj.liveUrl !== './') {
+        const demo = el('a', 'pq-btn pq-btn-secondary pq-btn-sm', 'Live Demo');
+        demo.href = proj.liveUrl;
+        demo.target = '_blank';
+        demo.rel = 'noopener noreferrer';
+        actions.append(demo);
+      }
+
+      body.append(h3, desc, techList, actions);
+      item.append(thumb, body);
+      grid.append(item);
+    });
+
+    card.append(header, filterRow, grid);
+    this.modalContainer.replaceChildren(card);
+  }
+
+  // B. Project Detail Modal
+  private renderProjectDetailModal(projectId?: string): void {
+    const proj = PROJECTS.find((p) => p.id === projectId) ?? PROJECTS[0]!;
+    const card = el('div', 'pq-modal-card');
+
+    const header = el('div', 'pq-modal-header');
+    const titleBox = el('div');
+    titleBox.append(
+      el('span', 'pq-modal-kicker', `✦ ${proj.category.toUpperCase()} PROJECT ✦`),
+      el('h2', 'pq-modal-title', proj.title),
+    );
+    const closeBtn = el('button', 'pq-modal-close', '✕');
+    closeBtn.type = 'button';
+    closeBtn.setAttribute('aria-label', 'Close Project Details');
+    closeBtn.addEventListener('click', () => this.openModal('portfolio'));
+    header.append(titleBox, closeBtn);
+
+    const body = el('div', 'pq-detail-body');
+
+    const descSection = el('section', 'pq-detail-section');
+    descSection.append(
+      el('h4', 'pq-section-title', 'Overview'),
+      el('p', undefined, proj.fullDescription),
+    );
+
+    const probSection = el('section', 'pq-detail-section');
+    probSection.append(
+      el('h4', 'pq-section-title', 'Challenge & Solution'),
+      el('p', undefined, proj.problemSolved),
+    );
+
+    const featSection = el('section', 'pq-detail-section');
+    featSection.append(el('h4', 'pq-section-title', 'Key Architecture & Features'));
+    const featList = el('ul', 'pq-detail-list');
+    proj.keyFeatures.forEach((f) => featList.append(el('li', undefined, f)));
+    featSection.append(featList);
+
+    const techSection = el('section', 'pq-detail-section');
+    techSection.append(el('h4', 'pq-section-title', 'Technologies'));
+    const techPills = el('div', 'pq-tech-pills');
+    proj.technologies.forEach((t) => techPills.append(el('span', 'pq-tech-pill', t)));
+    techSection.append(techPills);
+
+    const footer = el('div', 'pq-modal-footer');
+    const backBtn = el('button', 'pq-btn pq-btn-secondary', '◀ Back to Workshop');
+    backBtn.type = 'button';
+    backBtn.addEventListener('click', () => this.openModal('portfolio'));
+    footer.append(backBtn);
+
+    if (proj.githubUrl) {
+      const gh = el('a', 'pq-btn pq-btn-gold', 'View on GitHub ↗');
+      gh.href = proj.githubUrl;
+      gh.target = '_blank';
+      gh.rel = 'noopener noreferrer';
+      footer.append(gh);
+    }
+
+    body.append(descSection, probSection, featSection, techSection);
+    card.append(header, body, footer);
+    this.modalContainer.replaceChildren(card);
+  }
+
+  // C. Skills Modal
+  private renderSkillsModal(): void {
+    const card = el('div', 'pq-modal-card pq-modal-wide');
+
+    const header = el('div', 'pq-modal-header');
+    const titleBox = el('div');
+    titleBox.append(
+      el('span', 'pq-modal-kicker', '⚔ TECHNICAL ABILITIES ⚔'),
+      el('h2', 'pq-modal-title', 'The Skills Forge'),
+    );
+    const closeBtn = el('button', 'pq-modal-close', '✕');
+    closeBtn.type = 'button';
+    closeBtn.addEventListener('click', () => this.closeModal());
+    header.append(titleBox, closeBtn);
+
+    const grid = el('div', 'pq-skills-grid');
+
+    SKILL_CATEGORIES.forEach((cat) => {
+      const catBox = el('div', 'pq-skill-cat');
+      const catTitle = el('h3', 'pq-skill-cat-title');
+      catTitle.append(
+        el('span', 'pq-skill-cat-icon', cat.icon),
+        document.createTextNode(` ${cat.title}`),
+      );
+      catBox.append(catTitle);
+
+      const list = el('div', 'pq-skill-list');
+      cat.skills.forEach((s) => {
+        const item = el('div', 'pq-skill-item');
+        const topRow = el('div', 'pq-skill-item-top');
+        const name = el('strong', 'pq-skill-name', s.name);
+        const level = el('span', 'pq-skill-level', s.level);
+        topRow.append(name, level);
+
+        const note = el('div', 'pq-skill-note', s.note);
+        item.append(topRow, note);
+        list.append(item);
+      });
+
+      catBox.append(list);
+      grid.append(catBox);
+    });
+
+    card.append(header, grid);
+    this.modalContainer.replaceChildren(card);
+  }
+
+  // D. About Modal
+  private renderAboutModal(): void {
+    const card = el('div', 'pq-modal-card');
+
+    const header = el('div', 'pq-modal-header');
+    const titleBox = el('div');
+    titleBox.append(
+      el('span', 'pq-modal-kicker', '📜 DEVELOPER PROFILE 📜'),
+      el('h2', 'pq-modal-title', 'About Cottage'),
+    );
+    const closeBtn = el('button', 'pq-modal-close', '✕');
+    closeBtn.type = 'button';
+    closeBtn.addEventListener('click', () => this.closeModal());
+    header.append(titleBox, closeBtn);
+
+    const body = el('div', 'pq-detail-body');
+
+    // Profile card
+    const devBio = el('div', 'pq-about-intro');
+    const avatar = el('div', 'pq-about-avatar', '🧙‍♂️');
+    const devMeta = el('div', 'pq-about-meta');
+    devMeta.append(
+      el('h3', 'pq-about-name', DEVELOPER_PROFILE.name),
+      el('p', 'pq-about-title', DEVELOPER_PROFILE.title),
+      el('p', 'pq-about-loc', `📍 ${DEVELOPER_PROFILE.location}`),
+    );
+    devBio.append(avatar, devMeta);
+
+    const bioSection = el('div', 'pq-about-text');
+    DEVELOPER_PROFILE.bio.forEach((paragraph) => {
+      bioSection.append(el('p', undefined, paragraph));
+    });
+
+    const highlightsBox = el('div', 'pq-about-highlights');
+    highlightsBox.append(el('h4', 'pq-section-title', 'Core Highlights'));
+    const hlList = el('ul', 'pq-detail-list');
+    DEVELOPER_PROFILE.highlights.forEach((h) => hlList.append(el('li', undefined, h)));
+    highlightsBox.append(hlList);
+
+    const footer = el('div', 'pq-modal-footer');
+    const contactBtn = el('button', 'pq-btn pq-btn-gold', 'Contact Me ✉');
+    contactBtn.type = 'button';
+    contactBtn.addEventListener('click', () => this.openModal('contact'));
+
+    const projBtn = el('button', 'pq-btn pq-btn-secondary', 'View Projects ✦');
+    projBtn.type = 'button';
+    projBtn.addEventListener('click', () => this.openModal('portfolio'));
+    footer.append(projBtn, contactBtn);
+
+    body.append(devBio, bioSection, highlightsBox);
+    card.append(header, body, footer);
+    this.modalContainer.replaceChildren(card);
+  }
+
+  // E. Contact Modal
+  private renderContactModal(): void {
+    const card = el('div', 'pq-modal-card');
+
+    const header = el('div', 'pq-modal-header');
+    const titleBox = el('div');
+    titleBox.append(
+      el('span', 'pq-modal-kicker', '✉ GET IN TOUCH ✉'),
+      el('h2', 'pq-modal-title', 'Contact House & Notice Board'),
+    );
+    const closeBtn = el('button', 'pq-modal-close', '✕');
+    closeBtn.type = 'button';
+    closeBtn.addEventListener('click', () => this.closeModal());
+    header.append(titleBox, closeBtn);
+
+    const body = el('div', 'pq-detail-body');
+
+    // Fast Contact Cards
+    const cardsRow = el('div', 'pq-contact-cards');
+
+    const emailCard = el('div', 'pq-contact-chip');
+    emailCard.append(
+      el('div', 'pq-contact-label', 'Direct Email'),
+      el('div', 'pq-contact-val', DEVELOPER_PROFILE.email),
+    );
+    const copyBtn = el('button', 'pq-btn pq-btn-sm', 'Copy Email 📋');
+    copyBtn.type = 'button';
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(DEVELOPER_PROFILE.email).then(
+        () => {
+          soundEffects.playSuccess();
+          this.showToast('📋 Email copied to clipboard!');
+        },
+        () => {
+          this.showToast(`Contact: ${DEVELOPER_PROFILE.email}`);
+        },
+      );
+    });
+    emailCard.append(copyBtn);
+
+    const ghCard = el('div', 'pq-contact-chip');
+    ghCard.append(
+      el('div', 'pq-contact-label', 'GitHub Profile'),
+      el('div', 'pq-contact-val', DEVELOPER_PROFILE.name),
+    );
+    const ghLink = el('a', 'pq-btn pq-btn-sm', 'Visit GitHub ↗');
+    ghLink.href = DEVELOPER_PROFILE.github;
+    ghLink.target = '_blank';
+    ghLink.rel = 'noopener noreferrer';
+    ghCard.append(ghLink);
+
+    cardsRow.append(emailCard, ghCard);
+
+    // Interactive message form
+    const formSection = el('section', 'pq-contact-form-section');
+    formSection.append(el('h4', 'pq-section-title', 'Send a Message / Project Inquiry'));
+
+    const form = el('form', 'pq-contact-form');
+    form.noValidate = true;
+
+    const nameGroup = el('div', 'pq-form-group');
+    nameGroup.append(el('label', undefined, 'Your Name'));
+    const nameInput = el('input', 'pq-form-input');
+    nameInput.type = 'text';
+    nameInput.placeholder = 'e.g. Alex Adventurer';
+    nameInput.required = true;
+    nameGroup.append(nameInput);
+
+    const emailGroup = el('div', 'pq-form-group');
+    emailGroup.append(el('label', undefined, 'Your Email'));
+    const emailInput = el('input', 'pq-form-input');
+    emailInput.type = 'email';
+    emailInput.placeholder = 'e.g. alex@example.com';
+    emailInput.required = true;
+    emailGroup.append(emailInput);
+
+    const subjectGroup = el('div', 'pq-form-group');
+    subjectGroup.append(el('label', undefined, 'Subject'));
+    const subjectInput = el('input', 'pq-form-input');
+    subjectInput.type = 'text';
+    subjectInput.placeholder = 'e.g. Project Inquiry / Collaboration';
+    subjectGroup.append(subjectInput);
+
+    const msgGroup = el('div', 'pq-form-group');
+    msgGroup.append(el('label', undefined, 'Message'));
+    const msgText = el('textarea', 'pq-form-input pq-form-textarea');
+    msgText.placeholder = 'Write your message or inquiry here…';
+    msgText.required = true;
+    msgGroup.append(msgText);
+
+    const formFeedback = el('div', 'pq-form-feedback');
+
+    const submitBtn = el('button', 'pq-btn pq-btn-gold', 'Send via Email Client ✉');
+    submitBtn.type = 'submit';
+
+    form.append(nameGroup, emailGroup, subjectGroup, msgGroup, formFeedback, submitBtn);
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = nameInput.value.trim();
+      const email = emailInput.value.trim();
+      const subject = subjectInput.value.trim() || 'Portfolio Inquiry';
+      const message = msgText.value.trim();
+
+      if (!name || !email || !message) {
+        formFeedback.textContent = 'Please fill out your name, email, and message.';
+        formFeedback.className = 'pq-form-feedback is-error';
+        return;
+      }
+
+      if (!email.includes('@') || !email.includes('.')) {
+        formFeedback.textContent = 'Please enter a valid email address.';
+        formFeedback.className = 'pq-form-feedback is-error';
+        return;
+      }
+
+      // Generate verified mailto link with encoded parameters
+      const bodyText = `From: ${name} (${email})\n\n${message}`;
+      const mailtoUrl = `mailto:${DEVELOPER_PROFILE.email}?subject=${encodeURIComponent(
+        `[PixelQuest] ${subject}`,
+      )}&body=${encodeURIComponent(bodyText)}`;
+
+      // Copy text to clipboard as convenient fallback
+      navigator.clipboard.writeText(`To: ${DEVELOPER_PROFILE.email}\nSubject: ${subject}\n\n${bodyText}`).catch(() => {});
+
+      soundEffects.playSuccess();
+      formFeedback.textContent =
+        'Launching email client! Text also copied to clipboard as fallback.';
+      formFeedback.className = 'pq-form-feedback is-success';
+
+      window.location.href = mailtoUrl;
+    });
+
+    formSection.append(form);
+    body.append(cardsRow, formSection);
+    card.append(header, body);
+    this.modalContainer.replaceChildren(card);
+  }
+
+  // F. How to Play Modal
+  private renderHelpModal(): void {
+    const card = el('div', 'pq-modal-card');
+
+    const header = el('div', 'pq-modal-header');
+    const titleBox = el('div');
+    titleBox.append(
+      el('span', 'pq-modal-kicker', '★ ADVENTURE GUIDE ★'),
+      el('h2', 'pq-modal-title', 'How to Play'),
+    );
+    const closeBtn = el('button', 'pq-modal-close', '✕');
+    closeBtn.type = 'button';
+    closeBtn.addEventListener('click', () => this.closeModal());
+    header.append(titleBox, closeBtn);
+
+    const body = el('div', 'pq-detail-body');
+
+    // Keyboard section
+    const kbSection = el('section', 'pq-detail-section');
+    kbSection.append(el('h4', 'pq-section-title', 'Desktop Keyboard & Mouse Controls'));
+    const kbGrid = el('div', 'pq-controls-grid');
+
+    const keys = [
+      { key: 'W / ↑', action: 'Walk Up' },
+      { key: 'S / ↓', action: 'Walk Down' },
+      { key: 'A / ←', action: 'Walk Left' },
+      { key: 'D / →', action: 'Walk Right' },
+      { key: 'E / Space', action: 'Interact / Talk / Enter Building' },
+      { key: 'Esc', action: 'Pause Menu / Close Active Dialog' },
+      { key: 'M', action: 'Toggle Sound On/Off' },
+      { key: 'Click/Hold', action: 'Steer towards mouse cursor' },
+    ];
+
+    keys.forEach((k) => {
+      const item = el('div', 'pq-control-item');
+      item.append(el('kbd', 'pq-key-badge', k.key), el('span', undefined, k.action));
+      kbGrid.append(item);
+    });
+    kbSection.append(kbGrid);
+
+    // Mobile touch section
+    const touchSection = el('section', 'pq-detail-section');
+    touchSection.append(el('h4', 'pq-section-title', 'Mobile Touch Controls'));
+    const touchList = el('ul', 'pq-detail-list');
+    touchList.append(
+      el('li', undefined, 'Bottom-Left: Virtual D-pad for 4-directional walking.'),
+      el('li', undefined, 'Bottom-Right: Contextual Action Button (lights up gold when near NPCs or doors).'),
+      el('li', undefined, 'Tap to Navigate: Tap anywhere on open ground to steer the player.'),
+      el('li', undefined, 'Top-Right HUD: Sound toggle, pause menu, and fullscreen.'),
+    );
+    touchSection.append(touchList);
+
+    // Village Points of Interest
+    const poiSection = el('section', 'pq-detail-section');
+    poiSection.append(el('h4', 'pq-section-title', 'Village Landmarks'));
+    const poiList = el('ul', 'pq-detail-list');
+    poiList.append(
+      el('li', undefined, '✦ Portfolio Hall (North): Browse featured projects and live demos.'),
+      el('li', undefined, '⚔ Skills Forge (West): View technologies, frameworks, and skill levels.'),
+      el('li', undefined, '📜 About Cottage (South-West): Developer background and engineering approach.'),
+      el('li', undefined, '✉ Contact House (South-East): Social links and direct message board.'),
+      el('li', undefined, '🧙‍♂️ Rowan the Guide (Plaza): Answers questions and gives village directions.'),
+    );
+    poiSection.append(poiList);
+
+    const footer = el('div', 'pq-modal-footer');
+    const okBtn = el('button', 'pq-btn pq-btn-gold', 'Got It! Let’s Explore ▶');
+    okBtn.type = 'button';
+    okBtn.addEventListener('click', () => this.closeModal());
+    footer.append(okBtn);
+
+    body.append(kbSection, touchSection, poiSection);
+    card.append(header, body, footer);
+    this.modalContainer.replaceChildren(card);
+  }
+
+  // G. Pause Menu Modal
+  private renderPauseModal(): void {
+    const card = el('div', 'pq-modal-card pq-modal-compact');
+
+    const header = el('div', 'pq-modal-header');
+    header.append(el('h2', 'pq-modal-title', '⏸ Game Paused'));
+    const closeBtn = el('button', 'pq-modal-close', '✕');
+    closeBtn.type = 'button';
+    closeBtn.addEventListener('click', () => this.closeModal());
+    header.append(closeBtn);
+
+    const body = el('div', 'pq-pause-menu');
+
+    const resumeBtn = el('button', 'pq-btn pq-btn-gold pq-btn-large', 'Resume Adventure');
+    resumeBtn.type = 'button';
+    resumeBtn.addEventListener('click', () => this.closeModal());
+
+    const fastTravelBox = el('div', 'pq-fast-travel');
+    fastTravelBox.append(el('h4', 'pq-section-title', 'Quick Travel'));
+    const travelGrid = el('div', 'pq-travel-grid');
+
+    const destinations = [
+      { label: '✦ Portfolio', modal: 'portfolio' },
+      { label: '⚔ Skills', modal: 'skills' },
+      { label: '📜 About', modal: 'about' },
+      { label: '✉ Contact', modal: 'contact' },
+    ];
+
+    destinations.forEach((d) => {
+      const btn = el('button', 'pq-btn pq-btn-secondary pq-btn-sm', d.label);
+      btn.type = 'button';
+      btn.addEventListener('click', () => this.openModal(d.modal));
+      travelGrid.append(btn);
+    });
+    fastTravelBox.append(travelGrid);
+
+    const soundToggle = el('button', 'pq-btn', soundEffects.isMuted ? '🔊 Unmute Sound' : '🔇 Mute Sound');
+    soundToggle.type = 'button';
+    soundToggle.addEventListener('click', () => {
+      this.toggleSound();
+      soundToggle.textContent = soundEffects.isMuted ? '🔊 Unmute Sound' : '🔇 Mute Sound';
+    });
+
+    const helpBtn = el('button', 'pq-btn', '❓ How to Play');
+    helpBtn.type = 'button';
+    helpBtn.addEventListener('click', () => this.openModal('help'));
+
+    const spawnBtn = el('button', 'pq-btn', '🏠 Return to Plaza Spawn');
+    spawnBtn.type = 'button';
+    spawnBtn.addEventListener('click', () => {
+      soundEffects.playInteract();
+      eventBus.emit(GameEvents.TELEPORT_SPAWN);
+      this.closeModal();
+      this.showToast('Returned to Village Plaza spawn point.');
+    });
+
+    const titleBtn = el('button', 'pq-btn pq-btn-secondary', '↩ Return to Title Screen');
+    titleBtn.type = 'button';
+    titleBtn.addEventListener('click', () => {
+      this.closeModal();
+      this.hud.hidden = true;
+      this.welcomeScreen.hidden = false;
+      this.welcomeScreen.classList.remove('is-hidden');
+    });
+
+    body.append(resumeBtn, fastTravelBox, soundToggle, helpBtn, spawnBtn, titleBtn);
+    card.append(header, body);
+    this.modalContainer.replaceChildren(card);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Global Actions & Utilities
+  // ---------------------------------------------------------------------------
+  private toggleSound(): void {
+    const isMuted = soundEffects.toggleMute();
+    this.soundBtn.textContent = isMuted ? '🔇' : '🔊';
+    this.showToast(isMuted ? '🔇 Sound muted' : '🔊 Sound enabled');
+    eventBus.emit(GameEvents.SOUND_TOGGLE, { muted: isMuted });
+  }
+
+  private toggleFullscreen(): void {
+    soundEffects.playInteract();
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      this.fsBtn.textContent = '✕';
+    } else {
+      document.exitFullscreen().catch(() => {});
+      this.fsBtn.textContent = '⛶';
+    }
+  }
+
+  private showToast(message: string): void {
+    const toast = el('div', 'pq-toast', message);
+    this.toastContainer.append(toast);
+    window.setTimeout(() => {
+      toast.classList.add('is-leaving');
+      window.setTimeout(() => toast.remove(), 400);
+    }, 3200);
   }
 
   private onAssetsReport(report: AssetReport): void {
@@ -169,34 +1239,30 @@ export class UIShell {
     this.assetList.replaceChildren(...items);
   }
 
-  private onGameReady(): void {
-    this.gameReady = true;
-    this.hud.hidden = false;
-    this.hideSplash(false);
-  }
-
-  private onViewport(vp: ViewportInfo): void {
-    this.readout.textContent =
-      `view ${vp.logicalWidth}×${vp.logicalHeight} · zoom ×${vp.zoom} · dpr ${vp.dpr} · ${vp.orientation}`;
-  }
-
-  private hideSplash(immediately: boolean): void {
-    if (!this.splash) return;
-    const splash = this.splash;
-    splash.classList.add('is-hidden');
-    if (immediately) {
-      splash.hidden = true;
-    } else {
-      // Remove from the accessibility tree once the fade finishes.
-      window.setTimeout(() => (splash.hidden = true), 400);
-    }
-  }
-
   private toggleAssetPanel(force?: boolean): void {
     const open = force ?? this.assetPanel.hidden;
     this.assetPanel.hidden = !open;
-    this.assetButton.setAttribute('aria-pressed', String(open));
+    this.assetBtn.setAttribute('aria-pressed', String(open));
     if (open) this.assetPanel.focus();
-    else this.assetButton.focus();
+    else this.assetBtn.focus();
+  }
+
+  showFatalError(payload: FatalErrorPayload): void {
+    this.hideSplash(true);
+    this.errorTitle.textContent = payload.title;
+    this.errorMessage.textContent = payload.message;
+    this.errorDetails.replaceChildren(
+      ...(payload.details ?? []).map((line) => el('li', undefined, line)),
+    );
+    this.errorOverlay.hidden = false;
+  }
+
+  private onViewport(vp: ViewportInfo): void {
+    // Optionally update HUD attributes based on viewport
+    if (vp.orientation === 'portrait') {
+      this.hud.classList.add('is-portrait');
+    } else {
+      this.hud.classList.remove('is-portrait');
+    }
   }
 }

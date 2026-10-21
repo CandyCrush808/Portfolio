@@ -12,6 +12,18 @@ export const GameEvents = {
   GAME_READY: 'game-ready',
   VIEWPORT_CHANGED: 'viewport-changed',
   FATAL_ERROR: 'fatal-error',
+  START_GAME: 'start-game',
+  OPEN_MODAL: 'open-modal',
+  CLOSE_MODAL: 'close-modal',
+  START_DIALOGUE: 'start-dialogue',
+  DIALOGUE_CLOSED: 'dialogue-closed',
+  ZONE_CHANGED: 'zone-changed',
+  INTERACTION_HINT: 'interaction-hint',
+  INTERACT_ACTION: 'interact-action',
+  OBJECTIVE_COMPLETED: 'objective-completed',
+  SOUND_TOGGLE: 'sound-toggle',
+  PAUSE_GAME: 'pause-game',
+  TELEPORT_SPAWN: 'teleport-spawn',
 } as const;
 
 export interface AssetReportEntry {

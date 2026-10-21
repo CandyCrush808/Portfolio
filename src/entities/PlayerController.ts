@@ -19,7 +19,41 @@ export class PlayerController extends Phaser.Physics.Arcade.Sprite {
     PlayerAnimations.register(scene);
   }
 
+  private frozen = false;
+
+  setFrozen(frozen: boolean): void {
+    this.frozen = frozen;
+    if (frozen) {
+      this.setVelocity(0, 0);
+      if (this.anims.isPlaying) {
+        this.anims.stop();
+        this.setFrame(PlayerAnimations.idleFrame(this.facing));
+      }
+      this.moving = false;
+    }
+  }
+
+  isFrozen(): boolean {
+    return this.frozen;
+  }
+
+  teleport(x: number, y: number): void {
+    this.setPosition(x, y - PLAYER.FOOT_OFFSET_Y);
+    this.setVelocity(0, 0);
+    this.setDepth(y);
+    this.moving = false;
+    if (this.anims.isPlaying) {
+      this.anims.stop();
+      this.setFrame(PlayerAnimations.idleFrame(this.facing));
+    }
+  }
+
   updateMovement(direction: Phaser.Math.Vector2): void {
+    if (this.frozen) {
+      this.setVelocity(0, 0);
+      return;
+    }
+
     const moving = direction.lengthSq() > 0;
     if (moving) {
       if (Math.abs(direction.x) > Math.abs(direction.y)) this.facing = direction.x < 0 ? 'left' : 'right';

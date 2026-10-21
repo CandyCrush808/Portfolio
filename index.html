@@ -12,32 +12,39 @@
       content="PixelQuest - a pixel-art RPG portfolio you explore on foot."
     />
     <link rel="icon" href="data:," />
-    <title>PixelQuest — My Portfolio Adventure</title>
+    <title>PixelQuest — Interactive RPG Portfolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="app">
       <!-- Game rendering lives here (Phaser canvas only). -->
       <div id="game-root" aria-label="PixelQuest game"></div>
 
-      <!-- DOM interface layer: HUD, panels, errors. Never rendered by Phaser. -->
+      <!-- DOM interface layer: Welcome, HUD, modals, dialogue, notifications, errors. -->
       <div id="ui-root"></div>
 
       <!-- Static loading screen: visible from first paint, before any JS runs. -->
       <div id="boot-splash" role="status" aria-live="polite">
         <div class="splash-card">
+          <div class="splash-badge">16-BIT ADVENTURE</div>
           <h1 class="splash-title">PixelQuest</h1>
-          <p class="splash-subtitle">My Portfolio Adventure</p>
+          <p class="splash-subtitle">Interactive RPG Portfolio</p>
           <div
             class="splash-bar"
             role="progressbar"
-            aria-label="Loading"
+            aria-label="Loading assets"
             aria-valuemin="0"
             aria-valuemax="100"
             aria-valuenow="0"
           >
             <div class="splash-bar-fill"></div>
           </div>
-          <p class="splash-status" id="splash-status">Loading…</p>
+          <p class="splash-status" id="splash-status">Preparing your adventure…</p>
         </div>
       </div>
     </div>

@@ -49,39 +49,105 @@ export class WorldBuilder {
       scene.physics.add.existing(obj, true); (obj.body as Phaser.Physics.Arcade.StaticBody).setSize(w,h);
       obj.setData('collisionLabel',label); solids.add(obj);
     };
+    // Building entrance signs and visual styling
+    const icons: Record<string, string> = {
+      portfolio: '✦ ',
+      skills: '⚔ ',
+      about: '📜 ',
+      contact: '✉ ',
+    };
+
     for (const b of VILLAGE.buildings) {
-      const sprite = scene.add.image(b.x,b.y,b.texture).setOrigin(0,0).setDisplaySize(b.width,b.height).setDepth(b.y+b.height);
-      sprite.setData('buildingId',b.id); sprite.setData('label',b.label);
-      b.collision.forEach((r,index)=>box(r.x,r.y,r.width,r.height,`${b.label} wall ${index+1}`));
-      const doorY=Math.max(...b.collision.map(r=>r.y+r.height));
-      scene.add.text(b.x+b.width/2,doorY+10,b.label,{
-        fontFamily:'sans-serif',fontSize:'14px',color:'#fff0cc',backgroundColor:'#69402F',padding:{x:5,y:3},
-      }).setOrigin(.5,0).setDepth(doorY+12);
-    }
-    box(water.x+8,water.y+8,water.columns*water.tileWidth-16,water.rows*water.tileHeight-16,'pond water');
-    for (const p of VILLAGE.props) {
-      if (p.texture === 'tree') {
-        scene.add.image(p.x,p.y,'village-tree').setOrigin(.5,.85).setDepth(p.y);
-        if (p.collision) box(p.x-p.collision.width/2,p.y-p.collision.height,p.collision.width,p.collision.height,'tree trunk');
-      } else scene.add.image(p.x,p.y,'village-flower').setOrigin(.5,.5).setDepth(2);
+      const sprite = scene.add.image(b.x, b.y, b.texture).setOrigin(0, 0).setDisplaySize(b.width, b.height).setDepth(b.y + b.height);
+      sprite.setData('buildingId', b.id);
+      sprite.setData('label', b.label);
+      b.collision.forEach((r, index) => box(r.x, r.y, r.width, r.height, `${b.label} wall ${index + 1}`));
+      const doorY = Math.max(...b.collision.map(r => r.y + r.height));
+      const icon = icons[b.id] ?? '';
+
+      // Retro wooden plaque sign
+      const sign = scene.add.text(b.x + b.width / 2, doorY + 8, `${icon}${b.label}`, {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        color: '#fff0cc',
+        backgroundColor: '#183d32',
+        stroke: '#f2c96d',
+        strokeThickness: 2,
+        padding: { x: 7, y: 4 },
+      }).setOrigin(0.5, 0).setDepth(doorY + 12);
+
+      // Subtle pulse on building sign
+      scene.tweens.add({
+        targets: sign,
+        alpha: 0.88,
+        duration: 1800,
+        yoyo: true,
+        repeat: -1,
+      });
     }
 
-    // Reserved workshop site is marked with a small sign; uncertain building art stays unused.
-    scene.add.text(1354, 530, 'Workshop site', { fontFamily:'sans-serif', fontSize:'14px', color:'#fff0cc', backgroundColor:'#69402F', padding:{x:6,y:4} }).setOrigin(.5).setDepth(1100);
+    box(water.x + 8, water.y + 8, water.columns * water.tileWidth - 16, water.rows * water.tileHeight - 16, 'pond water');
+
+    for (const p of VILLAGE.props) {
+      if (p.texture === 'tree') {
+        scene.add.image(p.x, p.y, 'village-tree').setOrigin(0.5, 0.85).setDepth(p.y);
+        if (p.collision) box(p.x - p.collision.width / 2, p.y - p.collision.height, p.collision.width, p.collision.height, 'tree trunk');
+      } else {
+        scene.add.image(p.x, p.y, 'village-flower').setOrigin(0.5, 0.5).setDepth(2);
+      }
+    }
+
+    // Plaza Notice Board
+    const noticeBoardX = 740;
+    const noticeBoardY = 760;
+    scene.add.image(noticeBoardX, noticeBoardY, 'village-notice-board').setOrigin(0.5, 0.85).setDepth(noticeBoardY);
+    box(noticeBoardX - 16, noticeBoardY - 20, 32, 20, 'notice board');
+
+    // Reserved workshop site is marked with a clean styled wooden sign
+    scene.add.text(1354, 530, '🏗️ Workshop Site', {
+      fontFamily: 'monospace',
+      fontSize: '13px',
+      color: '#fff0cc',
+      backgroundColor: '#69402F',
+      stroke: '#b8a58a',
+      strokeThickness: 2,
+      padding: { x: 6, y: 4 },
+    }).setOrigin(0.5).setDepth(1100);
+
     this.debug(solids);
     return solids;
   }
 
   private makeNatureTextures(): void {
-    const tree = this.scene.make.graphics({x:0,y:0});
-    tree.fillStyle(0x4b793b).fillEllipse(24,29,42,32);
-    tree.fillStyle(0x679d48).fillEllipse(19,20,31,27).fillEllipse(34,20,25,25);
-    tree.fillStyle(0x805635).fillRect(20,36,8,20);
-    tree.generateTexture('village-tree',48,56); tree.destroy();
-    const flower = this.scene.make.graphics({x:0,y:0});
-    flower.fillStyle(0x4b793b).fillRect(7,9,2,8); flower.fillStyle(0xf3d26a).fillCircle(8,7,3);
-    flower.fillStyle(0xe58b92).fillCircle(4,7,2).fillCircle(12,7,2);
-    flower.generateTexture('village-flower',16,18); flower.destroy();
+    const tree = this.scene.make.graphics({ x: 0, y: 0 });
+    tree.fillStyle(0x4b793b).fillEllipse(24, 29, 42, 32);
+    tree.fillStyle(0x679d48).fillEllipse(19, 20, 31, 27).fillEllipse(34, 20, 25, 25);
+    tree.fillStyle(0x805635).fillRect(20, 36, 8, 20);
+    tree.generateTexture('village-tree', 48, 56);
+    tree.destroy();
+
+    const flower = this.scene.make.graphics({ x: 0, y: 0 });
+    flower.fillStyle(0x4b793b).fillRect(7, 9, 2, 8);
+    flower.fillStyle(0xf3d26a).fillCircle(8, 7, 3);
+    flower.fillStyle(0xe58b92).fillCircle(4, 7, 2).fillCircle(12, 7, 2);
+    flower.generateTexture('village-flower', 16, 18);
+    flower.destroy();
+
+    // Wooden Notice Board texture
+    const nb = this.scene.make.graphics({ x: 0, y: 0 });
+    // Posts
+    nb.fillStyle(0x563820).fillRect(6, 18, 5, 18).fillRect(25, 18, 5, 18);
+    // Board back
+    nb.fillStyle(0x69402f).fillRect(2, 2, 32, 20);
+    nb.lineStyle(2, 0x3d2516, 1).strokeRect(2, 2, 32, 20);
+    // Parchment paper
+    nb.fillStyle(0xf5ebd2).fillRect(6, 5, 24, 14);
+    // Lines of text
+    nb.fillStyle(0x26332c, 0.7).fillRect(9, 8, 18, 2).fillRect(9, 12, 14, 2);
+    // Red pin
+    nb.fillStyle(0xe85d5d).fillCircle(18, 5, 2);
+    nb.generateTexture('village-notice-board', 36, 38);
+    nb.destroy();
   }
 
   private debug(solids: Phaser.Physics.Arcade.StaticGroup): void {
