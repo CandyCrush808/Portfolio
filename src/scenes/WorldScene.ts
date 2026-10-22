@@ -51,6 +51,7 @@ export class WorldScene extends Phaser.Scene {
   private debugLabel?: Phaser.GameObjects.Text;
   private pointerMoveVector = new Phaser.Math.Vector2();
   private lastMinimapBroadcast = 0;
+  private lastMinimapBroadcast = 0;
 
   constructor() {
     super(SCENE_KEYS.WORLD);
