@@ -684,38 +684,6 @@ export class UIShell {
     ctx.stroke();
   }
 
-    for (const building of VILLAGE.buildings) {
-      ctx.fillStyle = '#75462f';
-      ctx.fillRect(building.x * sx, building.y * sy, building.width * sx, building.height * sy);
-      ctx.fillStyle = '#e6ad62';
-      ctx.fillRect((building.x + 8) * sx, (building.y + 8) * sy, Math.max(4, (building.width - 16) * sx), Math.max(4, (building.height - 16) * sy));
-      ctx.fillStyle = '#315b43';
-      ctx.fillRect((building.x + building.width * 0.42) * sx, (building.y + building.height * 0.68) * sy, Math.max(4, building.width * 0.16 * sx), Math.max(4, building.height * 0.24 * sy));
-    }
-
-    for (const prop of VILLAGE.props) {
-      if (prop.texture !== 'tree') continue;
-      ctx.fillStyle = '#276345';
-      ctx.beginPath();
-      ctx.arc(prop.x * sx, prop.y * sy, 7, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#55a94e';
-      ctx.beginPath();
-      ctx.arc(prop.x * sx - 2, prop.y * sy - 2, 5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Player marker stays visible over the map.
-    ctx.fillStyle = '#fff4c7';
-    ctx.beginPath();
-    ctx.arc(this.minimapPlayer.x * sx, this.minimapPlayer.y * sy, 7, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#ed4e59';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(this.minimapPlayer.x * sx, this.minimapPlayer.y * sy, 5, 0, Math.PI * 2);
-    ctx.stroke();
-  }
 
   private onZoneChanged(payload: { zoneId: string; label: string }): void {
     const locText = this.locationBadge.querySelector<HTMLElement>('.pq-loc-text');
