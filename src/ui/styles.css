@@ -193,6 +193,51 @@ a:focus-visible {
   pointer-events: none;
 }
 
+.pq-hud.has-dialogue .pq-hud-bottom {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pq-minimap {
+  position: absolute;
+  top: max(10px, var(--pq-safe-top));
+  right: max(10px, var(--pq-safe-right));
+  width: clamp(145px, 17vw, 218px);
+  padding: 6px;
+  background: #171b30;
+  border: 4px double var(--pq-gold);
+  box-shadow: 0 4px 0 rgba(8, 12, 24, 0.9);
+  pointer-events: none;
+}
+
+.pq-minimap-compass {
+  position: absolute;
+  z-index: 1;
+  top: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--pq-gold);
+  border-radius: 50%;
+  background: #171b30;
+  color: var(--pq-cream);
+  font-family: var(--pq-font-pixel);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.pq-minimap-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 10 / 7;
+  image-rendering: pixelated;
+  border: 1px solid rgba(245, 235, 210, 0.45);
+}
+
 .pq-hud-top {
   position: absolute;
   top: max(var(--pq-space-2), var(--pq-safe-top));
@@ -248,6 +293,80 @@ a:focus-visible {
 .pq-identity-text {
   display: flex;
   flex-direction: column;
+}
+
+/* Reference-inspired player portrait and compact RPG status bars. */
+.pq-identity {
+  gap: 10px;
+  padding: 6px 10px 6px 6px;
+  background: rgba(23, 27, 48, 0.96);
+  border: 3px double var(--pq-gold);
+  box-shadow: 0 4px 0 rgba(8, 12, 24, 0.85);
+}
+
+.pq-avatar {
+  width: 58px;
+  height: 58px;
+  border: 2px solid var(--pq-gold);
+  background: #563c32;
+  font-size: 30px;
+  flex: 0 0 auto;
+}
+
+.pq-player-stats {
+  width: clamp(112px, 16vw, 205px);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.pq-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pq-stat-icon {
+  width: 18px;
+  color: #ff5b68;
+  font-size: 20px;
+  line-height: 1;
+  text-align: center;
+  text-shadow: 1px 2px #632b37;
+}
+
+.pq-energy-track + .pq-stat-icon,
+.pq-stat-row:nth-child(2) .pq-stat-icon {
+  color: #53d9f4;
+}
+
+.pq-stat-track {
+  height: 15px;
+  flex: 1;
+  overflow: hidden;
+  background: #10172b;
+  border: 2px solid #e9d8a5;
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.75);
+}
+
+.pq-stat-fill {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-right: 1px solid rgba(255,255,255,.6);
+}
+
+.pq-health-fill {
+  background: linear-gradient(#ff7a7a, #d92e4c);
+}
+
+.pq-energy-fill {
+  width: 72%;
+  background: linear-gradient(#55edff, #1195d0);
+}
+
+.pq-identity-text {
+  min-width: 0;
 }
 
 .pq-identity-name {
@@ -318,6 +437,9 @@ a:focus-visible {
 
 /* Top-Right: Game Controls */
 .pq-controls-bar {
+  position: absolute;
+  top: 156px;
+  right: 0;
   display: flex;
   gap: 6px;
 }
@@ -484,11 +606,14 @@ a:focus-visible {
 }
 
 .pq-dialogue-card {
-  width: min(720px, 100%);
-  background: rgba(16, 40, 32, 0.97);
-  border: 3px double var(--pq-cream);
-  box-shadow: 0 5px 0 var(--pq-dark-pine);
-  padding: var(--pq-space-3) var(--pq-space-4);
+  position: relative;
+  width: min(88vw, 1200px);
+  min-height: 150px;
+  background: linear-gradient(115deg, rgba(25, 31, 55, 0.99), rgba(20, 25, 45, 0.99));
+  border: 4px double var(--pq-gold);
+  outline: 1px solid rgba(245, 235, 210, 0.55);
+  box-shadow: 0 6px 0 rgba(8, 12, 24, 0.9), inset 0 0 0 3px rgba(242, 201, 109, 0.1);
+  padding: 16px 22px 16px 116px;
   cursor: pointer;
 }
 
@@ -502,13 +627,18 @@ a:focus-visible {
 }
 
 .pq-dialogue-portrait {
-  width: 40px;
-  height: 40px;
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 84px;
+  height: 92px;
   background: var(--pq-forest);
   border: 2px solid var(--pq-gold);
   display: grid;
   place-items: center;
-  font-size: 22px;
+  font-size: 42px;
+  box-shadow: 0 0 0 3px rgba(23, 27, 48, 0.9);
 }
 
 .pq-dialogue-info {
@@ -536,18 +666,24 @@ a:focus-visible {
 }
 
 .pq-dialogue-text {
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 16px;
+  line-height: 1.7;
   color: var(--pq-cream);
   min-height: 48px;
   user-select: text;
   -webkit-user-select: text;
 }
 
-.pq-dialogue-footer {
+ .pq-dialogue-footer {
   display: flex;
   justify-content: flex-end;
   margin-top: 10px;
+}
+
+.pq-dialogue-footer .pq-btn {
+  min-height: 30px;
+  padding: 5px 10px;
+  font-size: 9px;
 }
 
 /* --------------------------------------------------------------------------
@@ -1322,6 +1458,18 @@ a:focus-visible {
    Mobile & Responsive Adaptations
    -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
+  .pq-player-stats { width: 100px; }
+
+  .pq-minimap { width: 148px; top: 76px; }
+
+  .pq-controls-bar { top: 236px; }
+
+  .pq-dialogue-card { width: calc(100vw - 20px); padding: 12px 14px 12px 82px; min-height: 118px; }
+
+  .pq-dialogue-portrait { width: 58px; height: 68px; left: 10px; font-size: 30px; }
+
+  .pq-dialogue-text { font-size: 13px; min-height: 36px; }
+
   .pq-identity-role {
     display: none;
   }
@@ -1349,6 +1497,30 @@ a:focus-visible {
 }
 
 @media (max-width: 520px) {
+  .pq-player-stats { width: 76px; gap: 4px; }
+
+  .pq-stat-track { height: 11px; }
+
+  .pq-stat-icon { width: 13px; font-size: 15px; }
+
+  .pq-minimap { width: 118px; top: 74px; right: 8px; }
+
+  .pq-controls-bar { top: 198px; gap: 4px; }
+
+  .pq-controls-bar .pq-hud-btn { width: 34px; height: 34px; }
+
+  .pq-dialogue { left: 6px; right: 6px; bottom: max(8px, var(--pq-safe-bottom)); }
+
+  .pq-dialogue-card { width: 100%; padding: 10px 10px 10px 68px; min-height: 106px; }
+
+  .pq-dialogue-portrait { width: 48px; height: 58px; left: 8px; font-size: 25px; }
+
+  .pq-dialogue-name { font-size: 10px; }
+
+  .pq-dialogue-title { font-size: 10px; }
+
+  .pq-dialogue-text { font-size: 12px; min-height: 32px; }
+
   .pq-identity {
     padding: 4px 8px;
     gap: 6px;
