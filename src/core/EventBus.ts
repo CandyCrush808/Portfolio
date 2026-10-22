@@ -18,6 +18,7 @@ export const GameEvents = {
   START_DIALOGUE: 'start-dialogue',
   DIALOGUE_CLOSED: 'dialogue-closed',
   ZONE_CHANGED: 'zone-changed',
+  PLAYER_POSITION: 'player-position',
   INTERACTION_HINT: 'interaction-hint',
   INTERACT_ACTION: 'interact-action',
   OBJECTIVE_COMPLETED: 'objective-completed',
