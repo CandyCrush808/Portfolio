@@ -50,6 +50,8 @@ export class WorldScene extends Phaser.Scene {
   private debugBody?: Phaser.GameObjects.Graphics;
   private debugLabel?: Phaser.GameObjects.Text;
   private pointerMoveVector = new Phaser.Math.Vector2();
+  private lastMinimapBroadcast = 0;
+  private lastMinimapBroadcast = 0;
 
   constructor() {
     super(SCENE_KEYS.WORLD);
@@ -309,8 +311,14 @@ export class WorldScene extends Phaser.Scene {
     });
   }
 
-  update(): void {
+  update(time: number): void {
     const foot = this.player.footPoint;
+
+    // Broadcast player coordinates at a modest rate for the DOM minimap.
+    if (time - this.lastMinimapBroadcast >= 100) {
+      this.lastMinimapBroadcast = time;
+      eventBus.emit(GameEvents.PLAYER_POSITION, { x: foot.x, y: foot.y });
+    }
 
     // 1. Process movement
     if (!this.player.isFrozen()) {
