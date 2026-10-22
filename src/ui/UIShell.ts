@@ -518,8 +518,8 @@ export class UIShell {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#45c7dc';
     ctx.beginPath();
-    ctx.moveTo(0, 106 * sy);
-    ctx.lineTo(380 * sx, 106 * sy);
+    ctx.moveTo(0, 530 * sy);
+    ctx.lineTo(380 * sx, 530 * sy);
     ctx.lineTo(570 * sx, 310 * sy);
     ctx.lineTo(770 * sx, 420 * sy);
     ctx.lineTo(790 * sx, 650 * sy);
