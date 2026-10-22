@@ -11,6 +11,10 @@ import {
   SKILL_CATEGORIES,
   QUEST_OBJECTIVES,
   type QuestObjective,
+  EXPERIENCE_DATA,
+  SERVICES_DATA,
+  type ExperienceItem,
+  type ServiceItem,
 } from '../data/portfolioData';
 import { soundEffects } from '../audio/SoundEffects';
 import { VILLAGE } from '../world/maps/villageMap';
@@ -513,28 +517,75 @@ export class UIShell {
     const sy = canvas.height / VILLAGE.height;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Land, paths and river establish a readable bird's-eye village map.
-    ctx.fillStyle = '#75bd50';
+    // 1. Lush Green Land Base
+    ctx.fillStyle = '#539644';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#45c7dc';
+
+    // 2. Perimeter Forest Borders
+    ctx.fillStyle = '#265428';
+    ctx.fillRect(0, 0, canvas.width, 16);
+    ctx.fillRect(0, 0, 16, canvas.height);
+    ctx.fillRect(canvas.width - 16, 0, 16, canvas.height);
+    ctx.fillRect(0, canvas.height - 14, 150, 14);
+    ctx.fillRect(170, canvas.height - 14, canvas.width - 170, 14);
+
+    // 3. Southwest Tranquil Pond
+    ctx.fillStyle = '#1e8891';
     ctx.beginPath();
-    ctx.moveTo(0, 530 * sy);
-    ctx.lineTo(380 * sx, 530 * sy);
-    ctx.lineTo(570 * sx, 310 * sy);
-    ctx.lineTo(770 * sx, 420 * sy);
-    ctx.lineTo(790 * sx, 650 * sy);
-    ctx.lineTo(950 * sx, 800 * sy);
-    ctx.lineTo(950 * sx, canvas.height);
-    ctx.lineTo(700 * sx, canvas.height);
-    ctx.lineTo(700 * sx, 850 * sy);
-    ctx.lineTo(520 * sx, 700 * sy);
-    ctx.lineTo(0, 700 * sy);
+    ctx.ellipse(950 * sx, 2300 * sy, 340 * sx, 220 * sy, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#2cb8aa';
+    ctx.beginPath();
+    ctx.ellipse(950 * sx, 2300 * sy, 290 * sx, 180 * sy, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 4. Eastern River flowing smoothly down the map
+    ctx.fillStyle = '#1e8891';
+    ctx.beginPath();
+    ctx.moveTo(3360 * sx, 0);
+    ctx.lineTo(3600 * sx, 0);
+    ctx.lineTo(3580 * sx, 600 * sy);
+    ctx.lineTo(3520 * sx, 1200 * sy);
+    ctx.lineTo(3480 * sx, 1800 * sy);
+    ctx.lineTo(3440 * sx, 2400 * sy);
+    ctx.lineTo(3560 * sx, canvas.height);
+    ctx.lineTo(3320 * sx, canvas.height);
+    ctx.lineTo(3220 * sx, 2400 * sy);
+    ctx.lineTo(3260 * sx, 1800 * sy);
+    ctx.lineTo(3300 * sx, 1200 * sy);
+    ctx.lineTo(3360 * sx, 600 * sy);
     ctx.closePath();
     ctx.fill();
 
-    ctx.strokeStyle = '#dfc78b';
-    ctx.lineWidth = 12;
+    ctx.fillStyle = '#2cb8aa';
+    ctx.beginPath();
+    ctx.moveTo(3390 * sx, 0);
+    ctx.lineTo(3570 * sx, 0);
+    ctx.lineTo(3540 * sx, 600 * sy);
+    ctx.lineTo(3480 * sx, 1200 * sy);
+    ctx.lineTo(3440 * sx, 1800 * sy);
+    ctx.lineTo(3400 * sx, 2400 * sy);
+    ctx.lineTo(3520 * sx, canvas.height);
+    ctx.lineTo(3360 * sx, canvas.height);
+    ctx.lineTo(3260 * sx, 2400 * sy);
+    ctx.lineTo(3300 * sx, 1800 * sy);
+    ctx.lineTo(3340 * sx, 1200 * sy);
+    ctx.lineTo(3400 * sx, 600 * sy);
+    ctx.closePath();
+    ctx.fill();
+
+    // 5. River Bridges & Fishing Dock
+    ctx.fillStyle = '#87552e';
+    ctx.fillRect(3370 * sx, 480 * sy, 160 * sx, 40 * sy);
+    ctx.fillRect(3220 * sx, 1360 * sy, 160 * sx, 40 * sy);
+    ctx.fillRect(3230 * sx, 2370 * sy, 40 * sx, 160 * sy);
+    ctx.fillRect(975 * sx, 2180 * sy, 50 * sx, 80 * sy);
+
+    // 6. Connected Golden Dirt Paths
+    ctx.strokeStyle = '#947750';
+    ctx.lineWidth = 10;
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     for (const path of VILLAGE.paths) {
       ctx.beginPath();
       path.forEach((point, index) => {
@@ -545,6 +596,93 @@ export class UIShell {
       });
       ctx.stroke();
     }
+
+    ctx.strokeStyle = '#d9be8e';
+    ctx.lineWidth = 7;
+    for (const path of VILLAGE.paths) {
+      ctx.beginPath();
+      path.forEach((point, index) => {
+        const x = point.x * sx;
+        const y = point.y * sy;
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+
+    // Plaza Circle & Fountain
+    ctx.fillStyle = '#94826d';
+    ctx.beginPath();
+    ctx.arc(2048 * sx, 1440 * sy, 220 * sx, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#d9be8e';
+    ctx.beginPath();
+    ctx.arc(2048 * sx, 1440 * sy, 204 * sx, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Central Fountain on minimap
+    ctx.fillStyle = '#2cb8aa';
+    ctx.beginPath();
+    ctx.arc(2048 * sx, 1440 * sy, 55 * sx, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ded4c3';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 7. All 8 Buildings Color-Coded by Architectural Silhouette
+    const roofColors: Record<string, string> = {
+      about: '#b54737',
+      projects: '#3b526f',
+      skills: '#2b5796',
+      experience: '#a8362b',
+      services: '#2b5796',
+      contact: '#365476',
+      house1: '#a36433',
+      house2: '#a36433',
+    };
+
+    for (const building of VILLAGE.buildings) {
+      const bx = building.x * sx;
+      const by = building.y * sy;
+      const bw = building.width * sx;
+      const bh = building.height * sy;
+      const roofCol = roofColors[building.id] ?? '#75462f';
+
+      // Building footprint
+      ctx.fillStyle = '#4a3325';
+      ctx.fillRect(bx, by, bw, bh);
+
+      // Roof color
+      ctx.fillStyle = roofCol;
+      ctx.fillRect(bx + 2, by + 2, Math.max(4, bw - 4), Math.max(4, bh * 0.7));
+
+      // Services Market striped awning
+      if (building.id === 'services') {
+        ctx.fillStyle = '#d93a3a';
+        ctx.fillRect(bx + 4, by + bh * 0.55, Math.max(4, bw - 8), Math.max(2, bh * 0.18));
+      }
+
+      // Entrance door
+      ctx.fillStyle = '#f5ebd2';
+      ctx.fillRect(bx + bw * 0.42, by + bh * 0.75, Math.max(3, bw * 0.16), Math.max(4, bh * 0.22));
+    }
+
+    // 8. Player Marker with pulsing golden ring
+    const px = this.minimapPlayer.x * sx;
+    const py = this.minimapPlayer.y * sy;
+
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.arc(px, py, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#e63946';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(px, py, 4.5, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 
     for (const building of VILLAGE.buildings) {
       ctx.fillStyle = '#75462f';
@@ -587,12 +725,17 @@ export class UIShell {
     }
     if (locIcon) {
       const icons: Record<string, string> = {
-        portfolio: '✦',
+        spawn: '🚪',
+        portfolio: '⚒',
+        projects: '⚒',
         skills: '⚔',
         about: '📜',
+        experience: '🛡',
+        services: '⚖',
         contact: '✉',
-        pond: '⛲',
-        plaza: '🧭',
+        pond: '🎣',
+        plaza: '⛲',
+        river: '🌊',
       };
       locIcon.textContent = icons[payload.zoneId] ?? '🌲';
     }
@@ -751,6 +894,12 @@ export class UIShell {
         break;
       case 'about':
         this.renderAboutModal();
+        break;
+      case 'experience':
+        this.renderExperienceModal();
+        break;
+      case 'services':
+        this.renderServicesModal();
         break;
       case 'contact':
         this.renderContactModal();
@@ -1262,9 +1411,11 @@ export class UIShell {
     const travelGrid = el('div', 'pq-travel-grid');
 
     const destinations = [
-      { label: '✦ Portfolio', modal: 'portfolio' },
+      { label: '⚒ Projects', modal: 'portfolio' },
       { label: '⚔ Skills', modal: 'skills' },
       { label: '📜 About', modal: 'about' },
+      { label: '🛡 Experience', modal: 'experience' },
+      { label: '⚖ Services', modal: 'services' },
       { label: '✉ Contact', modal: 'contact' },
     ];
 
