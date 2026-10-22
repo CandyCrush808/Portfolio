@@ -13,6 +13,7 @@ import {
   type QuestObjective,
 } from '../data/portfolioData';
 import { soundEffects } from '../audio/SoundEffects';
+import { VILLAGE } from '../world/maps/villageMap';
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -51,6 +52,8 @@ export class UIShell {
 
   // In-Game HUD Elements
   private readonly hud: HTMLElement;
+  private readonly minimapCanvas: HTMLCanvasElement;
+  private minimapPlayer = { x: VILLAGE.spawn.x, y: VILLAGE.spawn.y };
   private readonly identityPanel: HTMLElement;
   private readonly locationBadge: HTMLElement;
   private readonly controlsBar: HTMLElement;
@@ -136,6 +139,21 @@ export class UIShell {
     const avatarInner = el('span', 'pq-avatar-img', '🧙‍♂️');
     avatar.appendChild(avatarInner);
 
+    const statsPanel = el('div', 'pq-player-stats');
+    const healthRow = el('div', 'pq-stat-row');
+    healthRow.append(el('span', 'pq-stat-icon', '♥'));
+    const healthTrack = el('div', 'pq-stat-track pq-health-track');
+    const healthFill = el('span', 'pq-stat-fill pq-health-fill');
+    healthTrack.append(healthFill);
+    healthRow.append(healthTrack);
+    const energyRow = el('div', 'pq-stat-row');
+    energyRow.append(el('span', 'pq-stat-icon', 'ϟ'));
+    const energyTrack = el('div', 'pq-stat-track pq-energy-track');
+    const energyFill = el('span', 'pq-stat-fill pq-energy-fill');
+    energyTrack.append(energyFill);
+    energyRow.append(energyTrack);
+    statsPanel.append(healthRow, energyRow);
+
     const identityText = el('div', 'pq-identity-text');
     const nameLine = el('div', 'pq-identity-name', DEVELOPER_PROFILE.name);
     const roleLine = el('div', 'pq-identity-role', DEVELOPER_PROFILE.role);
@@ -145,7 +163,7 @@ export class UIShell {
     statusLine.append(statusDot, statusLabel);
     identityText.append(nameLine, roleLine, statusLine);
 
-    this.identityPanel.append(avatar, identityText);
+    this.identityPanel.append(avatar, identityText, statsPanel);
     this.identityPanel.title = 'Click to view About Cottage';
     this.identityPanel.addEventListener('click', () => this.openModal('about'));
 
@@ -225,6 +243,17 @@ export class UIShell {
     hudBottom.append(this.questPanel, this.interactPrompt);
 
     this.hud.append(hudTop, hudBottom);
+
+    // Top-right minimap: a compact overview of the complete village.
+    const minimap = el('div', 'pq-minimap');
+    const compass = el('span', 'pq-minimap-compass', 'N');
+    this.minimapCanvas = el('canvas', 'pq-minimap-canvas');
+    this.minimapCanvas.width = 320;
+    this.minimapCanvas.height = 224;
+    this.minimapCanvas.setAttribute('aria-label', 'Village minimap showing player position');
+    minimap.append(compass, this.minimapCanvas);
+    this.hud.append(minimap);
+    this.drawMinimap();
 
     // 4. Dialogue Box
     this.dialogueBox = el('div', 'pq-dialogue');
@@ -349,6 +378,7 @@ export class UIShell {
     eventBus.on(GameEvents.VIEWPORT_CHANGED, this.onViewport, this);
     eventBus.on(GameEvents.FATAL_ERROR, this.showFatalError, this);
     eventBus.on(GameEvents.ZONE_CHANGED, this.onZoneChanged, this);
+    eventBus.on(GameEvents.PLAYER_POSITION, this.onPlayerPosition, this);
     eventBus.on(GameEvents.INTERACTION_HINT, this.onInteractionHint, this);
     eventBus.on(GameEvents.START_DIALOGUE, this.onStartDialogue, this);
     eventBus.on(GameEvents.OPEN_MODAL, this.onOpenModalEvent, this);
@@ -470,6 +500,85 @@ export class UIShell {
   // ---------------------------------------------------------------------------
   // In-Game HUD Updates
   // ---------------------------------------------------------------------------
+  private onPlayerPosition(payload: { x: number; y: number }): void {
+    this.minimapPlayer = payload;
+    this.drawMinimap();
+  }
+
+  private drawMinimap(): void {
+    const ctx = this.minimapCanvas.getContext('2d');
+    if (!ctx) return;
+    const canvas = this.minimapCanvas;
+    const sx = canvas.width / VILLAGE.width;
+    const sy = canvas.height / VILLAGE.height;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Land, paths and river establish a readable bird's-eye village map.
+    ctx.fillStyle = '#75bd50';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#45c7dc';
+    ctx.beginPath();
+    ctx.moveTo(0, 106 * sy);
+    ctx.lineTo(380 * sx, 106 * sy);
+    ctx.lineTo(570 * sx, 310 * sy);
+    ctx.lineTo(770 * sx, 420 * sy);
+    ctx.lineTo(790 * sx, 650 * sy);
+    ctx.lineTo(950 * sx, 800 * sy);
+    ctx.lineTo(950 * sx, canvas.height);
+    ctx.lineTo(700 * sx, canvas.height);
+    ctx.lineTo(700 * sx, 850 * sy);
+    ctx.lineTo(520 * sx, 700 * sy);
+    ctx.lineTo(0, 700 * sy);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = '#dfc78b';
+    ctx.lineWidth = 12;
+    ctx.lineCap = 'round';
+    for (const path of VILLAGE.paths) {
+      ctx.beginPath();
+      path.forEach((point, index) => {
+        const x = point.x * sx;
+        const y = point.y * sy;
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+
+    for (const building of VILLAGE.buildings) {
+      ctx.fillStyle = '#75462f';
+      ctx.fillRect(building.x * sx, building.y * sy, building.width * sx, building.height * sy);
+      ctx.fillStyle = '#e6ad62';
+      ctx.fillRect((building.x + 8) * sx, (building.y + 8) * sy, Math.max(4, (building.width - 16) * sx), Math.max(4, (building.height - 16) * sy));
+      ctx.fillStyle = '#315b43';
+      ctx.fillRect((building.x + building.width * 0.42) * sx, (building.y + building.height * 0.68) * sy, Math.max(4, building.width * 0.16 * sx), Math.max(4, building.height * 0.24 * sy));
+    }
+
+    for (const prop of VILLAGE.props) {
+      if (prop.texture !== 'tree') continue;
+      ctx.fillStyle = '#276345';
+      ctx.beginPath();
+      ctx.arc(prop.x * sx, prop.y * sy, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#55a94e';
+      ctx.beginPath();
+      ctx.arc(prop.x * sx - 2, prop.y * sy - 2, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Player marker stays visible over the map.
+    ctx.fillStyle = '#fff4c7';
+    ctx.beginPath();
+    ctx.arc(this.minimapPlayer.x * sx, this.minimapPlayer.y * sy, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ed4e59';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(this.minimapPlayer.x * sx, this.minimapPlayer.y * sy, 5, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
   private onZoneChanged(payload: { zoneId: string; label: string }): void {
     const locText = this.locationBadge.querySelector<HTMLElement>('.pq-loc-text');
     const locIcon = this.locationBadge.querySelector<HTMLElement>('.pq-loc-icon');
@@ -547,6 +656,7 @@ export class UIShell {
     if (!payload.lines || payload.lines.length === 0) return;
     this.dialogueQueue = payload.lines;
     this.currentDialogueIndex = 0;
+    this.hud.classList.add('has-dialogue');
     this.dialogueBox.hidden = false;
     this.showDialogueLine(this.dialogueQueue[0]!);
   }
@@ -602,6 +712,7 @@ export class UIShell {
   private closeDialogue(): void {
     window.clearInterval(this.typewriterTimer);
     this.dialogueBox.hidden = true;
+    this.hud.classList.remove('has-dialogue');
     this.isTypingDialogue = false;
     soundEffects.playClose();
     eventBus.emit(GameEvents.DIALOGUE_CLOSED);
