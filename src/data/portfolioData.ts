@@ -32,6 +32,29 @@ export interface DeveloperProfile {
   repoUrl: string;
 }
 
+
+export interface ExperienceItem {
+  id: string;
+  period: string;
+  role: string;
+  organization: string;
+  location: string;
+  type: 'Work' | 'Education' | 'Achievement';
+  description: string;
+  highlights: string[];
+  badges: string[];
+}
+
+export interface ServiceItem {
+  id: string;
+  icon: string;
+  title: string;
+  tagline: string;
+  description: string;
+  deliverables: string[];
+  technologies: string[];
+}
+
 export interface QuestObjective {
   id: string;
   title: string;
@@ -202,36 +225,57 @@ export const QUEST_OBJECTIVES: QuestObjective[] = [
   {
     id: 'explore-plaza',
     title: 'Explore the Main Plaza',
-    description: 'Walk around the central village square and get accustomed to the controls.',
+    description: 'Walk around the central village square and admire the stone fountain.',
     zone: 'Main Plaza',
-    completed: true,
+    completed: false,
   },
   {
     id: 'talk-guide',
     title: 'Meet Rowan the Guide',
-    description: 'Speak with Rowan standing near the plaza to learn about the village.',
+    description: 'Speak with Rowan standing near the fountain to learn about the village.',
     zone: 'Main Plaza',
     completed: false,
   },
   {
+    id: 'visit-about',
+    title: 'Inspect About Me Cottage',
+    description: 'Visit the cozy cottage on the western path to learn about the developer.',
+    zone: 'About Cottage',
+    completed: false,
+  },
+  {
     id: 'visit-portfolio',
-    title: 'Inspect Portfolio Hall',
-    description: 'Travel North to the Portfolio Hall and browse through featured projects.',
-    zone: 'Portfolio Hall',
+    title: 'Inspect Projects Workshop',
+    description: 'Travel North to the Projects Workshop and browse through featured creations.',
+    zone: 'Projects Workshop',
     completed: false,
   },
   {
     id: 'visit-skills',
-    title: 'Visit the Skills Forge',
-    description: 'Head West to the Skills Forge to see technical abilities and toolkits.',
-    zone: 'Skills Forge',
+    title: 'Visit the Skills Library',
+    description: 'Head Northwest to the Skills Library to view technical abilities and toolkits.',
+    zone: 'Skills Library',
+    completed: false,
+  },
+  {
+    id: 'visit-experience',
+    title: 'Enter Experience Guild Hall',
+    description: 'Venture Northeast across the bridge to inspect career milestones and credentials.',
+    zone: 'Guild Hall',
+    completed: false,
+  },
+  {
+    id: 'visit-services',
+    title: 'Browse the Services Market',
+    description: 'Visit the bustling market on the eastern side of the plaza to explore service offerings.',
+    zone: 'Services Market',
     completed: false,
   },
   {
     id: 'visit-contact',
-    title: 'Check the Contact House',
-    description: 'Venture South-East to the Contact House to find email and social channels.',
-    zone: 'Contact House',
+    title: 'Check the Contact Inn',
+    description: 'Venture Southeast along the river path to the Contact Inn to connect directly.',
+    zone: 'Contact Inn',
     completed: false,
   }
 ];
@@ -266,5 +310,191 @@ export const GUIDE_DIALOGUE = [
     title: 'Village Guide',
     avatarKey: 'guide',
     text: "Use WASD or arrow keys to stroll, and press E or Space when near a door or sign. Have fun exploring!"
+  }
+];
+
+
+export const EXPERIENCE_DATA: ExperienceItem[] = [
+  {
+    id: 'lead-dev',
+    period: '2023 — Present',
+    role: 'Senior Full-Stack Developer & Game Architect',
+    organization: 'Creative Interactive Labs',
+    location: 'Remote / Global',
+    type: 'Work',
+    description: 'Directing the architecture and implementation of responsive web apps, canvas 2D visualization tools, and interactive educational software.',
+    highlights: [
+      'Architected custom Phaser 3 / TypeScript game engine abstractions delivering consistent 60 FPS across mobile and desktop devices.',
+      'Developed real-time WebSocket state synchronizers with resilient reconnects and sub-50ms latency.',
+      'Mentored junior engineers and led best practices in accessibility (a11y), clean code, and modular pipelines.'
+    ],
+    badges: ['TypeScript', 'Phaser 3', 'Node.js', 'WebSockets', 'Vite', 'Architecture']
+  },
+  {
+    id: 'frontend-engineer',
+    period: '2021 — 2023',
+    role: 'Front-End Systems Engineer',
+    organization: 'Nexus Web Systems',
+    location: 'Remote',
+    type: 'Work',
+    description: 'Built high-throughput dashboard portals, reusable component libraries, and interactive canvas components for enterprise telemetry.',
+    highlights: [
+      'Refactored legacy UI components into strictly typed TypeScript and accessible modern CSS Grid designs.',
+      'Improved lighthouse performance score from 68 to 98 through asset pipelining, lazy-loading, and bundling optimizations.',
+      'Created automated visual regression test suites for cross-browser reliability.'
+    ],
+    badges: ['React', 'TypeScript', 'Tailwind CSS', 'Performance', 'CI/CD']
+  },
+  {
+    id: 'cs-degree',
+    period: '2017 — 2021',
+    role: 'Bachelor of Science in Computer Science',
+    organization: 'University Department of Engineering',
+    location: 'Academic Campus',
+    type: 'Education',
+    description: 'Focused on algorithms, data structures, computer graphics, distributed systems, and human-computer interaction.',
+    highlights: [
+      'Graduated with First Class Honors and Dean\'s Academic Excellence Award.',
+      'Completed Capstone project on procedural map generation and spatial indexing for 2D worlds.',
+      'Organized collegiate game jams and developer workshops.'
+    ],
+    badges: ['Algorithms', 'Data Structures', 'Graphics', 'Distributed Systems', 'HCI']
+  },
+  {
+    id: 'guild-master',
+    period: 'Achievements & Honors',
+    role: 'Guild Master Craftsman',
+    organization: 'Global Indie & Web Development Communities',
+    location: 'Worldwide',
+    type: 'Achievement',
+    description: 'Recognized for contributions to open-source game engines, developer tooling, and innovative interactive web portfolios.',
+    highlights: [
+      'Winner of 3 international Game Dev jams for technical polish and gameplay innovation.',
+      'Authored popular open-source utilities for pixel-art tile extraction and spritesheet normalization.',
+      'Active mentor helping aspiring developers break into software engineering.'
+    ],
+    badges: ['Open Source', 'Game Jams', 'Mentorship', 'Innovation']
+  }
+];
+
+export const SERVICES_DATA: ServiceItem[] = [
+  {
+    id: 'fullstack-dev',
+    icon: '💻',
+    title: 'Full-Stack Web Applications',
+    tagline: 'End-to-end modern web applications built for speed, scale, and resilience.',
+    description: 'From interactive client-side interfaces to resilient backend APIs and databases, I build complete web platforms tailored to your vision.',
+    deliverables: [
+      'Modern responsive SPA and PWA development',
+      'REST & GraphQL API design with Node.js and Express',
+      'Database modeling with PostgreSQL, SQLite, or MongoDB',
+      'Secure authentication, session management, and RBAC'
+    ],
+    technologies: ['TypeScript', 'React', 'Node.js', 'PostgreSQL', 'Vite', 'Tailwind CSS']
+  },
+  {
+    id: 'game-dev',
+    icon: '🎮',
+    title: 'Interactive 2D Games & Canvas',
+    tagline: 'Playful, memorable digital adventures and gamified interactive experiences.',
+    description: 'I transform standard web products into unforgettable interactive experiences using Phaser 3, Canvas 2D, and custom game physics.',
+    deliverables: [
+      'Custom 2D RPG, puzzle, and platformer development',
+      'Interactive product showcases and gamified onboarding',
+      'Audio synthesis and custom soundscape integration',
+      'Mobile-optimized touch controls and responsive viewports'
+    ],
+    technologies: ['Phaser 3', 'HTML5 Canvas', 'Web Audio API', 'Arcade Physics', 'Pixel Art']
+  },
+  {
+    id: 'ui-ux-design',
+    icon: '🎨',
+    title: 'UI/UX Design Systems & Access',
+    tagline: 'Tactile, high-contrast, accessible digital design with retro character.',
+    description: 'Crafting cohesive design systems, tactile interface components, and fully keyboard/screen-reader accessible experiences.',
+    deliverables: [
+      'Design tokens and modular CSS component libraries',
+      'Full WCAG AA/AAA accessibility compliance',
+      'Retro pixel-art and modern hybrid aesthetic design',
+      'Interactive animations, tactile micro-interactions, and sound cues'
+    ],
+    technologies: ['CSS Grid / Flexbox', 'ARIA', 'Figma', 'Pixel Art', 'Animations']
+  },
+  {
+    id: 'consulting',
+    icon: '⚡',
+    title: 'Architecture & Performance Audits',
+    tagline: 'Eliminating latency, streamlining asset pipelines, and elevating code quality.',
+    description: 'Deep-dive technical audits to boost FPS, shrink bundle weights, improve Core Web Vitals, and establish robust engineering patterns.',
+    deliverables: [
+      'Lighthouse and Core Web Vitals performance optimization',
+      'Asset pipeline automation and spritesheet slicing workflows',
+      'TypeScript migration and architectural refactoring',
+      'Code reviews and developer documentation'
+    ],
+    technologies: ['Vite', 'Webpack', 'Profilers', 'Automated CI/CD', 'Python Scripting']
+  }
+];
+
+export const ELENA_DIALOGUE = [
+  {
+    speaker: 'Guildmaster Elena',
+    title: 'Experience Guild',
+    avatarKey: 'elena',
+    text: 'Welcome to the Experience Guild Hall, traveler! I am Elena, Master of Chronicles.'
+  },
+  {
+    speaker: 'Guildmaster Elena',
+    title: 'Experience Guild',
+    avatarKey: 'elena',
+    text: 'Within these storied walls rest the developer\'s career timeline, verified credentials, and university honors.'
+  },
+  {
+    speaker: 'Guildmaster Elena',
+    title: 'Experience Guild',
+    avatarKey: 'elena',
+    text: 'Step forward to inspect our chronicles, or venture west into the village square when you are ready!'
+  }
+];
+
+export const SILAS_DIALOGUE = [
+  {
+    speaker: 'Merchant Silas',
+    title: 'Services Market',
+    avatarKey: 'silas',
+    text: 'Fine wares, sharp code, and bespoke craftsmanship! Welcome to the Services Market!'
+  },
+  {
+    speaker: 'Merchant Silas',
+    title: 'Services Market',
+    avatarKey: 'silas',
+    text: 'Need a full-stack web application, a custom 2D canvas game engine, or a performance overhaul?'
+  },
+  {
+    speaker: 'Merchant Silas',
+    title: 'Services Market',
+    avatarKey: 'silas',
+    text: 'Step up to my stall to browse our service offerings and technical deliverables. Satisfaction guaranteed!'
+  }
+];
+
+export const FINN_DIALOGUE = [
+  {
+    speaker: 'Barkeep Finn',
+    title: 'Contact Inn',
+    avatarKey: 'finn',
+    text: 'Pull up a stool, traveler! Rest your boots by the hearth at the Contact Inn.'
+  },
+  {
+    speaker: 'Barkeep Finn',
+    title: 'Contact Inn',
+    avatarKey: 'finn',
+    text: 'Looking to hire, collaborate on a project, or just discuss game mechanics? The message board is right here.'
+  },
+  {
+    speaker: 'Barkeep Finn',
+    title: 'Contact Inn',
+    avatarKey: 'finn',
+    text: 'Step inside to copy the developer\'s email, GitHub repository link, or send an inquiry!'
   }
 ];

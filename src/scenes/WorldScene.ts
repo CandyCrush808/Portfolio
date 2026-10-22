@@ -7,6 +7,12 @@ import { InputController } from '../input/InputController';
 import { WorldBuilder } from '../world/WorldBuilder';
 import { VILLAGE } from '../world/maps/villageMap';
 import { soundEffects } from '../audio/SoundEffects';
+import {
+  GUIDE_DIALOGUE,
+  ELENA_DIALOGUE,
+  SILAS_DIALOGUE,
+  FINN_DIALOGUE,
+} from '../data/portfolioData';
 
 interface InteractableZone {
   id: string;
@@ -27,21 +33,25 @@ interface ZoneDef {
 }
 
 const WORLD_ZONES: ZoneDef[] = [
-  { id: 'portfolio', label: 'PORTFOLIO HALL', x: 802, y: 350, radius: 190 },
-  { id: 'skills', label: 'SKILLS FORGE', x: 280, y: 520, radius: 170 },
-  { id: 'about', label: 'ABOUT COTTAGE', x: 560, y: 820, radius: 160 },
-  { id: 'contact', label: 'CONTACT HOUSE', x: 1010, y: 820, radius: 160 },
-  { id: 'pond', label: 'TRANQUIL POND', x: 1380, y: 720, radius: 180 },
-  { id: 'plaza', label: 'MAIN PLAZA', x: 800, y: 720, radius: 210 },
+  { id: 'spawn', label: 'SOUTHERN ENTRANCE', x: 2048, y: 2650, radius: 240 },
+  { id: 'plaza', label: 'MAIN PLAZA & FOUNTAIN', x: 2048, y: 1440, radius: 260 },
+  { id: 'projects', label: 'PROJECTS WORKSHOP', x: 2048, y: 840, radius: 220 },
+  { id: 'skills', label: 'SKILLS LIBRARY', x: 1368, y: 850, radius: 220 },
+  { id: 'about', label: 'ABOUT COTTAGE', x: 1068, y: 1480, radius: 220 },
+  { id: 'experience', label: 'EXPERIENCE GUILD HALL', x: 2848, y: 820, radius: 240 },
+  { id: 'services', label: 'SERVICES MARKET', x: 2648, y: 1480, radius: 220 },
+  { id: 'contact', label: 'CONTACT INN', x: 2808, y: 2150, radius: 240 },
+  { id: 'pond', label: 'TRANQUIL POND & DOCK', x: 1000, y: 2220, radius: 280 },
+  { id: 'river', label: 'EASTERN RIVER & BRIDGES', x: 3340, y: 1380, radius: 280 },
 ];
 
 /**
- * WorldScene: handles village exploration, NPC interaction, building trigger zones,
- * responsive camera scaling, and input dispatch.
+ * WorldScene: handles full 4096x3072 RPG village exploration, NPC interactions,
+ * building trigger zones, responsive camera follow, and input dispatch.
  */
 export class WorldScene extends Phaser.Scene {
   private player!: PlayerController;
-  private npc!: NPC;
+  private npcs: NPC[] = [];
   private inputController!: InputController;
   private interactables: InteractableZone[] = [];
   private currentInteractable: InteractableZone | null = null;
@@ -51,24 +61,35 @@ export class WorldScene extends Phaser.Scene {
   private debugLabel?: Phaser.GameObjects.Text;
   private pointerMoveVector = new Phaser.Math.Vector2();
   private lastMinimapBroadcast = 0;
-  private lastMinimapBroadcast = 0;
 
   constructor() {
     super(SCENE_KEYS.WORLD);
   }
 
   create(): void {
-    // 1. Build world solids, ground, paths, buildings, and nature
+    // 1. Build world solids, ground, paths, buildings, rivers, and nature
     const blockers = new WorldBuilder(this).build();
     this.physics.world.setBounds(0, 0, VILLAGE.width, VILLAGE.height);
 
-    // 2. Create player
+    // 2. Create player at southern spawn gate
     this.player = new PlayerController(this, VILLAGE.spawn);
     this.physics.add.collider(this.player, blockers);
 
-    // 3. Create Rowan the Guide NPC
-    this.npc = new NPC(this, 845, 740, 'guide', 'Rowan the Guide');
-    this.physics.add.collider(this.player, this.npc);
+    // 3. Create Village NPCs
+    this.npcs = [
+      // Rowan the Guide in Main Plaza
+      new NPC(this, 2000, 1500, 'guide', 'Rowan the Guide', GUIDE_DIALOGUE, 0xf7d88c, 'talk-guide'),
+      // Elena the Guildmaster at Experience Guild Hall
+      new NPC(this, 2800, 890, 'elena', 'Guildmaster Elena', ELENA_DIALOGUE, 0xe87a7a, 'visit-experience'),
+      // Silas the Merchant at Services Market
+      new NPC(this, 2600, 1560, 'silas', 'Merchant Silas', SILAS_DIALOGUE, 0x82c4f5, 'visit-services'),
+      // Finn the Barkeep at Contact Inn
+      new NPC(this, 2760, 2240, 'finn', 'Barkeep Finn', FINN_DIALOGUE, 0xf0ab65, 'visit-contact'),
+    ];
+
+    for (const npc of this.npcs) {
+      this.physics.add.collider(this.player, npc);
+    }
 
     // 4. Setup Interactable Zones
     this.setupInteractables();
@@ -78,15 +99,14 @@ export class WorldScene extends Phaser.Scene {
     camera.setBounds(0, 0, VILLAGE.width, VILLAGE.height);
 
     const getWorldZoom = (): number => {
-      if (window.innerWidth <= 600) return 0.44;
-      if (window.innerWidth <= 900) return 0.46;
-      if (window.innerHeight <= 540) return 0.46;
-      return 0.50;
+      if (window.innerWidth <= 600) return 0.85;
+      if (window.innerWidth <= 900) return 0.92;
+      return 1.0;
     };
 
     camera.setZoom(getWorldZoom());
-    // Smooth camera follow with slight vertical offset to keep player comfortably centered
-    camera.startFollow(this.player, true, 0.12, 0.12, 0, 24);
+    // Smooth camera follow with slight vertical offset for centered player framing
+    camera.startFollow(this.player, true, 0.12, 0.12, 0, 16);
     camera.roundPixels = true;
 
     const updateWorldZoom = (): void => {
@@ -125,125 +145,282 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private setupInteractables(): void {
+    const npcMap = new Map(this.npcs.map((n) => [n.id, n]));
+
     this.interactables = [
+      // NPCs
       {
         id: 'guide',
         label: 'Rowan the Guide',
         hint: 'Talk to Rowan',
-        x: 845,
-        y: 740,
-        radius: 80,
-        action: () => this.npc.interact(),
+        x: 2000,
+        y: 1500,
+        radius: 85,
+        action: () => npcMap.get('guide')?.interact(),
       },
       {
-        id: 'portfolio',
-        label: 'Portfolio Hall',
-        hint: 'Enter Portfolio Hall',
-        x: 802,
-        y: 445,
-        radius: 75,
+        id: 'elena',
+        label: 'Guildmaster Elena',
+        hint: 'Speak with Elena',
+        x: 2800,
+        y: 890,
+        radius: 85,
+        action: () => npcMap.get('elena')?.interact(),
+      },
+      {
+        id: 'silas',
+        label: 'Merchant Silas',
+        hint: 'Trade with Silas',
+        x: 2600,
+        y: 1560,
+        radius: 85,
+        action: () => npcMap.get('silas')?.interact(),
+      },
+      {
+        id: 'finn',
+        label: 'Barkeep Finn',
+        hint: 'Talk to Finn',
+        x: 2760,
+        y: 2240,
+        radius: 85,
+        action: () => npcMap.get('finn')?.interact(),
+      },
+
+      // Portfolio Building 1: About Me Cottage
+      {
+        id: 'about',
+        label: 'About Me Cottage',
+        hint: 'Enter About Me Cottage',
+        x: 1068,
+        y: 1540,
+        radius: 85,
+        action: () => {
+          soundEffects.playOpen();
+          eventBus.emit(GameEvents.OBJECTIVE_COMPLETED, {
+            id: 'visit-about',
+            title: 'Inspect About Me Cottage',
+          });
+          eventBus.emit(GameEvents.OPEN_MODAL, { id: 'about' });
+        },
+      },
+
+      // Portfolio Building 2: Projects Workshop
+      {
+        id: 'projects',
+        label: 'Projects Workshop',
+        hint: 'Enter Projects Workshop',
+        x: 2048,
+        y: 880,
+        radius: 85,
         action: () => {
           soundEffects.playOpen();
           eventBus.emit(GameEvents.OBJECTIVE_COMPLETED, {
             id: 'visit-portfolio',
-            title: 'Inspect Portfolio Hall',
+            title: 'Inspect Projects Workshop',
           });
           eventBus.emit(GameEvents.OPEN_MODAL, { id: 'portfolio' });
         },
       },
+
+      // Portfolio Building 3: Skills Library
       {
         id: 'skills',
-        label: 'Skills Forge',
-        hint: 'Enter Skills Forge',
-        x: 271,
-        y: 606,
-        radius: 75,
+        label: 'Skills Library',
+        hint: 'Enter Skills Library',
+        x: 1368,
+        y: 900,
+        radius: 85,
         action: () => {
           soundEffects.playOpen();
           eventBus.emit(GameEvents.OBJECTIVE_COMPLETED, {
             id: 'visit-skills',
-            title: 'Visit the Skills Forge',
+            title: 'Visit the Skills Library',
           });
           eventBus.emit(GameEvents.OPEN_MODAL, { id: 'skills' });
         },
       },
+
+      // Portfolio Building 4: Experience Guild Hall
       {
-        id: 'about',
-        label: 'About Cottage',
-        hint: 'Enter About Cottage',
-        x: 560,
-        y: 914,
-        radius: 75,
+        id: 'experience',
+        label: 'Experience Guild Hall',
+        hint: 'Enter Experience Guild Hall',
+        x: 2848,
+        y: 860,
+        radius: 85,
         action: () => {
           soundEffects.playOpen();
-          eventBus.emit(GameEvents.OPEN_MODAL, { id: 'about' });
+          eventBus.emit(GameEvents.OBJECTIVE_COMPLETED, {
+            id: 'visit-experience',
+            title: 'Enter Experience Guild Hall',
+          });
+          eventBus.emit(GameEvents.OPEN_MODAL, { id: 'experience' });
         },
       },
+
+      // Portfolio Building 5: Services Market
+      {
+        id: 'services',
+        label: 'Services Market',
+        hint: 'Enter Services Market',
+        x: 2648,
+        y: 1540,
+        radius: 85,
+        action: () => {
+          soundEffects.playOpen();
+          eventBus.emit(GameEvents.OBJECTIVE_COMPLETED, {
+            id: 'visit-services',
+            title: 'Browse the Services Market',
+          });
+          eventBus.emit(GameEvents.OPEN_MODAL, { id: 'services' });
+        },
+      },
+
+      // Portfolio Building 6: Contact Inn
       {
         id: 'contact',
-        label: 'Contact House',
-        hint: 'Enter Contact House',
-        x: 1007,
-        y: 914,
-        radius: 75,
+        label: 'Contact Inn',
+        hint: 'Enter Contact Inn',
+        x: 2808,
+        y: 2220,
+        radius: 85,
         action: () => {
           soundEffects.playOpen();
           eventBus.emit(GameEvents.OBJECTIVE_COMPLETED, {
             id: 'visit-contact',
-            title: 'Check the Contact House',
+            title: 'Check the Contact Inn',
           });
           eventBus.emit(GameEvents.OPEN_MODAL, { id: 'contact' });
         },
       },
+
+      // Decorative House 1
       {
-        id: 'notice-board',
-        label: 'Plaza Notice Board',
-        hint: 'Read Notice Board',
-        x: 740,
-        y: 760,
-        radius: 65,
-        action: () => {
-          soundEffects.playOpen();
-          eventBus.emit(GameEvents.OPEN_MODAL, { id: 'help' });
-        },
-      },
-      {
-        id: 'workshop',
-        label: 'Workshop Site',
-        hint: 'Inspect Workshop Site',
-        x: 1354,
-        y: 530,
-        radius: 70,
+        id: 'house1',
+        label: 'Forest Cottage',
+        hint: 'Inspect Forest Cottage',
+        x: 648,
+        y: 960,
+        radius: 80,
         action: () => {
           soundEffects.playInteract();
           eventBus.emit(GameEvents.START_DIALOGUE, {
             lines: [
               {
-                speaker: 'Village Signpost',
-                title: 'Notice',
+                speaker: 'Forest Cottage',
+                title: 'Resident Notes',
                 avatarKey: 'sign',
-                text: 'Workshop Site — Reserved for upcoming game engine modules, experimental canvas shaders, and creative labs. Under active construction!',
+                text: 'A charming timber cottage nestled deep in the northwestern woods. The aroma of warm herbal tea and fresh pine drifts from the chimney.',
               },
             ],
           });
         },
       },
+
+      // Decorative House 2
       {
-        id: 'pond',
-        label: 'Tranquil Pond',
-        hint: 'Admire Tranquil Pond',
-        x: 1320,
-        y: 720,
-        radius: 75,
+        id: 'house2',
+        label: 'Riverside Homestead',
+        hint: 'Inspect Riverside Homestead',
+        x: 508,
+        y: 1700,
+        radius: 80,
         action: () => {
           soundEffects.playInteract();
           eventBus.emit(GameEvents.START_DIALOGUE, {
             lines: [
               {
-                speaker: 'Tranquil Waters',
+                speaker: 'Riverside Homestead',
+                title: 'Resident Notes',
+                avatarKey: 'sign',
+                text: 'A quiet homestead bordering the western bluffs. Hand-carved wooden tools rest neatly against the garden fence.',
+              },
+            ],
+          });
+        },
+      },
+
+      // Plaza Notice Board
+      {
+        id: 'notice-board',
+        label: 'Plaza Notice Board',
+        hint: 'Read Notice Board',
+        x: 1950,
+        y: 1560,
+        radius: 75,
+        action: () => {
+          soundEffects.playOpen();
+          eventBus.emit(GameEvents.OPEN_MODAL, { id: 'help' });
+        },
+      },
+
+      // Central Fountain
+      {
+        id: 'fountain',
+        label: 'Stone Fountain',
+        hint: 'Admire Fountain',
+        x: 2048,
+        y: 1440,
+        radius: 90,
+        action: () => {
+          soundEffects.playInteract();
+          eventBus.emit(GameEvents.OBJECTIVE_COMPLETED, {
+            id: 'explore-plaza',
+            title: 'Explore the Main Plaza',
+          });
+          eventBus.emit(GameEvents.START_DIALOGUE, {
+            lines: [
+              {
+                speaker: 'Stone Fountain',
+                title: 'Village Landmark',
+                avatarKey: 'fountain',
+                text: 'The grand village fountain gushes sparkling clear water. A tranquil centerpiece connecting every corner of Pixel Town.',
+              },
+            ],
+          });
+        },
+      },
+
+      // Tranquil Pond & Fishing Dock
+      {
+        id: 'pond',
+        label: 'Tranquil Pond Dock',
+        hint: 'Inspect Fishing Dock',
+        x: 1000,
+        y: 2220,
+        radius: 85,
+        action: () => {
+          soundEffects.playInteract();
+          eventBus.emit(GameEvents.START_DIALOGUE, {
+            lines: [
+              {
+                speaker: 'Tranquil Pond',
                 title: 'Reflection',
                 avatarKey: 'pond',
-                text: 'Gentle ripples drift across the water. A peaceful spot in Pixel Town to take a breath and recharge.',
+                text: 'Gentle ripples drift across the water as a western waterfall tumbles softly into the pond. Lily pads bob lazily in the breeze.',
+              },
+            ],
+          });
+        },
+      },
+
+      // Southern Entrance Arch
+      {
+        id: 'arch',
+        label: 'Village Gateway',
+        hint: 'Inspect Gateway',
+        x: 2048,
+        y: 2520,
+        radius: 80,
+        action: () => {
+          soundEffects.playInteract();
+          eventBus.emit(GameEvents.START_DIALOGUE, {
+            lines: [
+              {
+                speaker: 'Village Archway',
+                title: 'PixelQuest Gateway',
+                avatarKey: 'sign',
+                text: 'Welcome to Pixel Town! Head North along the golden avenue to reach the central fountain and begin your adventure.',
               },
             ],
           });
@@ -254,7 +431,6 @@ export class WorldScene extends Phaser.Scene {
 
   private setupEventListeners(): void {
     const onInteract = (): void => {
-      // Dialogue and modal overlays freeze the player; ignore world actions until closed.
       if (this.player.isFrozen()) return;
       if (this.currentInteractable) {
         this.currentInteractable.action();
@@ -266,8 +442,6 @@ export class WorldScene extends Phaser.Scene {
     };
 
     const onDialogueClosed = (): void => {
-      // Defer unfreezing until the current INTERACT_ACTION event has finished
-      // dispatching, otherwise the same input can immediately retrigger the NPC.
       this.time.delayedCall(0, () => this.player.setFrozen(false));
     };
 
@@ -307,15 +481,15 @@ export class WorldScene extends Phaser.Scene {
       eventBus.off(GameEvents.CLOSE_MODAL, onCloseModal, this);
       eventBus.off(GameEvents.PAUSE_GAME, onPauseGame, this);
       eventBus.off(GameEvents.TELEPORT_SPAWN, onTeleportSpawn, this);
-      if (this.npc) this.npc.destroy();
+      for (const npc of this.npcs) npc.destroy();
     });
   }
 
   update(time: number): void {
     const foot = this.player.footPoint;
 
-    // Broadcast player coordinates at a modest rate for the DOM minimap.
-    if (time - this.lastMinimapBroadcast >= 100) {
+    // Broadcast player coordinates at a steady rate for the DOM minimap
+    if (time - this.lastMinimapBroadcast >= 80) {
       this.lastMinimapBroadcast = time;
       eventBus.emit(GameEvents.PLAYER_POSITION, { x: foot.x, y: foot.y });
     }
@@ -341,9 +515,9 @@ export class WorldScene extends Phaser.Scene {
       this.player.updateMovement(Phaser.Math.Vector2.ZERO);
     }
 
-    // 2. Update NPC distance and facing
-    if (this.npc) {
-      this.npc.updatePlayerDistance(foot);
+    // 2. Update NPCs distance and facing
+    for (const npc of this.npcs) {
+      npc.updatePlayerDistance(foot);
     }
 
     // 3. Check interactables in proximity

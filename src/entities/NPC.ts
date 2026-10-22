@@ -4,28 +4,42 @@ import { eventBus, GameEvents } from '../core/EventBus';
 import { GUIDE_DIALOGUE } from '../data/portfolioData';
 import { soundEffects } from '../audio/SoundEffects';
 
+export interface NPCDialogueLine {
+  speaker: string;
+  title?: string;
+  avatarKey?: string;
+  text: string;
+}
+
 export class NPC extends Phaser.Physics.Arcade.Sprite {
   private readonly promptIcon: Phaser.GameObjects.Container;
   private readonly promptTween: Phaser.Tweens.Tween;
   public readonly id: string;
   public readonly label: string;
-  public readonly interactionDistance = 75;
+  public readonly interactionDistance = 85;
+  private readonly dialogueLines: NPCDialogueLine[];
+  private readonly objectiveId?: string;
 
   constructor(
     scene: Phaser.Scene,
     x: number,
     y: number,
     id = 'guide',
-    label = 'Rowan the Guide'
+    label = 'Rowan the Guide',
+    dialogueLines: NPCDialogueLine[] = GUIDE_DIALOGUE,
+    tint = 0xf7d88c,
+    objectiveId = 'talk-guide',
   ) {
-    // Uses frame 0 with a gentle golden sage tint to distinguish from player
+    // Uses frame 0 with distinctive tint to distinguish from player
     super(scene, x, y - PLAYER.FOOT_OFFSET_Y, 'player-atlas', 0);
     this.id = id;
     this.label = label;
+    this.dialogueLines = dialogueLines;
+    this.objectiveId = objectiveId;
 
     scene.add.existing(this);
     scene.physics.add.existing(this, true); // Static body so player cannot walk through
-    this.setScale(PLAYER.SCALE).setDepth(y).setTint(0xf7d88c);
+    this.setScale(PLAYER.SCALE).setDepth(y).setTint(tint);
 
     const body = this.body as Phaser.Physics.Arcade.StaticBody;
     body.setSize(PLAYER.BODY_WIDTH, PLAYER.BODY_HEIGHT);
@@ -37,7 +51,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     bubbleBg.lineStyle(2, 0xf2c96d, 1);
     bubbleBg.fillRoundedRect(-14, -14, 28, 22, 4);
     bubbleBg.strokeRoundedRect(-14, -14, 28, 22, 4);
-    // Little pointer triangle
+    // Pointer triangle
     bubbleBg.fillTriangle(0, 8, -4, 12, 4, 12);
 
     const iconText = scene.add.text(0, -3, '!', {
@@ -79,12 +93,14 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
 
   interact(): void {
     soundEffects.playInteract();
-    eventBus.emit(GameEvents.OBJECTIVE_COMPLETED, {
-      id: 'talk-guide',
-      title: 'Meet Rowan the Guide',
-    });
+    if (this.objectiveId) {
+      eventBus.emit(GameEvents.OBJECTIVE_COMPLETED, {
+        id: this.objectiveId,
+        title: this.label,
+      });
+    }
     eventBus.emit(GameEvents.START_DIALOGUE, {
-      lines: GUIDE_DIALOGUE,
+      lines: this.dialogueLines,
     });
   }
 
