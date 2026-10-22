@@ -46,6 +46,11 @@
   box-sizing: border-box;
 }
 
+/* Honor the HTML hidden attribute even when a component defines display:grid/flex. */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;
