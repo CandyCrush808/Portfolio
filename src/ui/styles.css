@@ -438,7 +438,7 @@ a:focus-visible {
 /* Top-Right: Game Controls */
 .pq-controls-bar {
   position: absolute;
-  top: 156px;
+  top: 184px;
   right: 0;
   display: flex;
   gap: 6px;
