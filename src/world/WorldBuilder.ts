@@ -1,6 +1,5 @@
 import * as Phaser from 'phaser';
 import { VILLAGE } from './maps/villageMap';
-import { assetUrl } from '../config/assetManifest';
 
 export const WORLD_REQUIRED_TEXTURES = [
   'terrain-atlas',
