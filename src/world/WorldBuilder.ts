@@ -23,7 +23,12 @@ export class WorldBuilder {
     this.createWorldCanvasTextures();
 
     // 1. Base Ground (Lush pixel-art grass with coordinate-seeded variations)
-    scene.add.image(0, 0, 'village-ground').setOrigin(0).setDepth(0);
+    // Repeat a small grass tile across the world instead of allocating one 4096x3072 texture.
+    // Large generated textures can fail on some browser/GPU combinations and expose the navy background.
+    scene.add
+      .tileSprite(0, 0, VILLAGE.width, VILLAGE.height, 'village-ground')
+      .setOrigin(0, 0)
+      .setDepth(-10);
 
     // 2. Water Bodies (River and Southwest Pond)
     this.buildWaterBodies();
@@ -122,27 +127,26 @@ export class WorldBuilder {
   private createWorldCanvasTextures(): void {
     const { scene } = this;
 
-    // 1. Ground Canvas: 4096 x 3072 rich lush grass with subtle micro-textures
+    // 1. Seam-safe 128x128 grass tile repeated over the full 4096x3072 world.
     const ground = scene.make.graphics({ x: 0, y: 0 });
     ground.fillGradientStyle(0x5a9e47, 0x5a9e47, 0x4f8e3c, 0x4f8e3c, 1);
-    ground.fillRect(0, 0, VILLAGE.width, VILLAGE.height);
+    ground.fillRect(0, 0, 128, 128);
 
-    // Natural grass blade highlights and tufts
-    for (let y = 16; y < VILLAGE.height; y += 48) {
-      for (let x = 16; x < VILLAGE.width; x += 48) {
+    // Deterministic grass details kept away from tile edges to avoid obvious seams.
+    for (let y = 8; y < 120; y += 12) {
+      for (let x = 8; x < 120; x += 12) {
         const n = (x * 37 + y * 53) % 17;
-        if (n < 4) {
-          ground.fillStyle(n === 0 ? 0x447d33 : 0x6bb354, 0.45);
-          ground.fillRect(x, y, 4, 3);
-          ground.fillRect(x + 2, y - 2, 2, 2);
-        } else if (n === 5) {
-          // Subtle flower clover dot
-          ground.fillStyle(0xf7e879, 0.6);
-          ground.fillCircle(x + 3, y + 3, 2);
+        if (n < 5) {
+          ground.fillStyle(n === 0 ? 0x447d33 : 0x6bb354, 0.55);
+          ground.fillRect(x, y, 3, 2);
+          ground.fillRect(x + 1, y - 2, 2, 2);
+        } else if (n === 7) {
+          ground.fillStyle(0xf7e879, 0.55);
+          ground.fillRect(x + 2, y + 2, 2, 2);
         }
       }
     }
-    ground.generateTexture('village-ground', VILLAGE.width, VILLAGE.height);
+    ground.generateTexture('village-ground', 128, 128);
     ground.destroy();
 
     // 2. Notice board texture
