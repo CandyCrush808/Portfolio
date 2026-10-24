@@ -1,20 +1,24 @@
-# PixelQuest — My Portfolio Adventure
+# Candy Crush Portfolio
 
-Responsive pixel-art RPG portfolio. Phaser 3 + Vite + TypeScript. Static site, no backend.
+@connector:github:"GitHub API" https://github.com/CandyCrush808/Portfolio
 
-## Commands
-- `npm install`
-- `npm run dev` — dev server (http://localhost:5173). `npm run dev:host` exposes it on your LAN for phone testing.
-- `npm run build` — typecheck + production build to `dist/`
-- `npm run preview` — serve `dist/` (http://localhost:4173)
-- Add `?debug` to the URL to expose `window.__PIXELQUEST__` for tests.
+This project was built with [Lovable](https://lovable.dev).
 
-## Layout
-- `src/config` constants, asset manifest, Phaser config
-- `src/core` event bus, responsive scaler
-- `src/scenes`, `src/entities`, `src/input`, `src/world`, `src/ui`, `src/utils`
-- `public/assets` served art; `assets-source/` untouched originals
-- `docs/` project documentation (requirements, architecture, phases, tracker...)
+## Build with Lovable
 
-Status: Phase 1 complete (see `docs/task-tracker.md`).
-# Portfolio
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/4b9e5e38-5aa6-47f9-9e92-275bbdd09fa8).
+
+- **Ship faster**: describe what you want to build and Lovable handles the code.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+
+## Development
+
+Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+
+```sh
+git clone <this-repository-url>
+cd <repository-name>
+npm i
+npm run dev
+```
