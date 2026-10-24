@@ -35,7 +35,7 @@ export const TEXTURE_KEYS = {
 export const PLAYER = {
   /** Pixels per second in world coordinates. */
   SPEED: 110,
-  SCALE: 0.5,
+  SCALE: 0.35,
   BODY_WIDTH: 40,
   BODY_HEIGHT: 20,
   BODY_OFFSET_X: 52,
