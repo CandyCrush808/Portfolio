@@ -192,6 +192,7 @@ export class WorldBuilder {
       const key = rand() > 0.55 ? 'terrain-grass-2' : 'terrain-grass-3';
       scene.add.image(x, y, 'terrain-atlas', key)
         .setOrigin(0.5, 0.5)
+        .setDisplaySize(48, 52)
         .setAlpha(0.35 + rand() * 0.3)
         .setDepth(-19);
     }
@@ -215,9 +216,9 @@ export class WorldBuilder {
         if (distance <= 1.08) {
           const frame = ((Math.floor(x / 58) + Math.floor(y / 58)) % 3 === 0)
             ? 'terrain-water-2' : 'terrain-water';
-          tile(x, y, frame, 64, 1);
+          tile(x, y, frame, 46, 1);
         } else if (distance <= 1.35 && (Math.floor(x / 58) + Math.floor(y / 58)) % 2 === 0) {
-          tile(x, y, 'terrain-water-edge', 66, 1.5);
+          tile(x, y, 'terrain-water-edge', 48, 1.5);
         }
       }
     }
@@ -230,16 +231,16 @@ export class WorldBuilder {
         const frame = edge
           ? (((Math.floor(y / 58) + Math.floor(x / 58)) % 2 === 0) ? 'terrain-water-edge' : 'terrain-water-edge-2')
           : (((Math.floor(y / 58) + Math.floor(x / 58)) % 3 === 0) ? 'terrain-water-2' : 'terrain-water');
-        tile(x, y, frame, 64, edge ? 1.5 : 1);
+        tile(x, y, frame, 46, edge ? 1.5 : 1);
       }
     }
 
     // Waterfall accents made from the same terrain-water artwork.
     for (let i = 0; i < 4; i += 1) {
-      tile(3480 + i * 14, 58 + i * 34, i % 2 ? 'terrain-water-edge' : 'terrain-water', 62, 3);
+      tile(3480 + i * 14, 58 + i * 34, i % 2 ? 'terrain-water-edge' : 'terrain-water', 46, 3);
     }
     for (let i = 0; i < 3; i += 1) {
-      tile(535 + i * 18, 2250 + i * 26, i % 2 ? 'terrain-water-edge' : 'terrain-water', 58, 3);
+      tile(535 + i * 18, 2250 + i * 26, i % 2 ? 'terrain-water-edge' : 'terrain-water', 44, 3);
     }
   }
 
@@ -262,27 +263,27 @@ export class WorldBuilder {
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const distance = Math.hypot(dx, dy);
-        const steps = Math.max(1, Math.ceil(distance / 42));
+        const steps = Math.max(1, Math.ceil(distance / 30));
         const angle = Math.atan2(dy, dx) * 0.08;
         for (let step = 0; step <= steps; step += 1) {
           const t = step / steps;
-          stamp(a.x + dx * t, a.y + dy * t, 'terrain-dirt', 76, 4, angle);
+          stamp(a.x + dx * t, a.y + dy * t, 'terrain-dirt', 48, 4, angle);
         }
       }
     }
 
     // Central village plaza made from the provided cobblestone tile.
-    for (let y = 1310; y <= 1570; y += 54) {
-      for (let x = 1880; x <= 2216; x += 54) {
+    for (let y = 1310; y <= 1570; y += 42) {
+      for (let x = 1880; x <= 2216; x += 42) {
         const dx = (x - 2048) / 178;
         const dy = (y - 1440) / 140;
-        if (dx * dx + dy * dy <= 1.12) stamp(x, y, 'terrain-cobble', 62, 5);
+        if (dx * dx + dy * dy <= 1.12) stamp(x, y, 'terrain-cobble', 42, 5);
       }
     }
 
     // Cobblestone arrival pad at the southern entrance.
-    for (let y = 2710; y <= 2790; y += 48) {
-      for (let x = 1950; x <= 2146; x += 48) stamp(x, y, 'terrain-cobble', 54, 5);
+    for (let y = 2710; y <= 2790; y += 36) {
+      for (let x = 1950; x <= 2146; x += 36) stamp(x, y, 'terrain-cobble', 38, 5);
     }
   }
 
