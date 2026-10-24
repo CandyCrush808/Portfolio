@@ -207,7 +207,7 @@ export class WorldBuilder {
         .setDepth(depth);
     };
 
-    // Southwest pond: compose a soft, irregular lake from actual water tiles.
+    // Southwest pond assembled from the supplied water and water-edge tiles.
     for (let y = 2070; y <= 2500; y += 58) {
       for (let x = 660; x <= 1300; x += 58) {
         const nx = (x - 980) / 330;
@@ -223,8 +223,7 @@ export class WorldBuilder {
       }
     }
 
-    // Eastern river: a gently winding ribbon of tiled water, bordered with the
-    // real water-edge art. Bridge sprites are layered above it later.
+    // Eastern river follows a soft meander, using image tiles rather than vector fills.
     for (let y = 10; y < VILLAGE.height; y += 58) {
       const centerX = 3420 + Math.sin(y / 390) * 85 + Math.sin(y / 170) * 22;
       for (let x = centerX - 145; x <= centerX + 145; x += 58) {
@@ -236,52 +235,13 @@ export class WorldBuilder {
       }
     }
 
-    // Waterfalls use the supplied river/edge tiles rather than vector-filled blocks.
+    // Waterfall accents made from the same terrain-water artwork.
     for (let i = 0; i < 4; i += 1) {
       tile(3480 + i * 14, 58 + i * 34, i % 2 ? 'terrain-water-edge' : 'terrain-water', 62, 3);
     }
     for (let i = 0; i < 3; i += 1) {
       tile(535 + i * 18, 2250 + i * 26, i % 2 ? 'terrain-water-edge' : 'terrain-water', 58, 3);
     }
-  }
-
- targets: ripples,
-      alpha: 0.35,
-      y: 4,
-      duration: 1600,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
-
-    // D. Waterfalls
-    // Northeast waterfall
-    const neFall = scene.add.graphics().setDepth(3);
-    neFall.fillStyle(0x76ecdc, 0.95);
-    neFall.fillRect(3440, 0, 80, 140);
-    neFall.fillStyle(0xffffff, 0.9);
-    neFall.fillRect(3448, 120, 64, 25);
-    scene.tweens.add({
-      targets: neFall,
-      alpha: 0.75,
-      duration: 400,
-      yoyo: true,
-      repeat: -1,
-    });
-
-    // Southwest waterfall
-    const swFall = scene.add.graphics().setDepth(3);
-    swFall.fillStyle(0x76ecdc, 0.95);
-    swFall.fillRect(490, 2220, 80, 90);
-    swFall.fillStyle(0xffffff, 0.9);
-    swFall.fillRect(540, 2290, 60, 24);
-    scene.tweens.add({
-      targets: swFall,
-      alpha: 0.75,
-      duration: 450,
-      yoyo: true,
-      repeat: -1,
-    });
   }
 
   private buildPathsAndPlaza(): void {
@@ -294,8 +254,8 @@ export class WorldBuilder {
         .setDepth(depth);
     };
 
-    // Stamp dirt terrain tiles along each route. Short spacing creates a connected,
-    // naturally irregular path instead of thick vector strokes.
+    // Place real dirt tiles along every route so the paths are part of the art,
+    // not vector strokes. The short step distance makes routes visually connected.
     for (const route of VILLAGE.paths) {
       for (let i = 0; i < route.length - 1; i += 1) {
         const a = route[i];
@@ -304,37 +264,27 @@ export class WorldBuilder {
         const dy = b.y - a.y;
         const distance = Math.hypot(dx, dy);
         const steps = Math.max(1, Math.ceil(distance / 42));
-        const angle = Math.atan2(dy, dx);
+        const angle = Math.atan2(dy, dx) * 0.08;
         for (let step = 0; step <= steps; step += 1) {
           const t = step / steps;
-          const x = a.x + dx * t;
-          const y = a.y + dy * t;
-          stamp(x, y, 'terrain-dirt', 76, 4, angle * 0.08);
+          stamp(a.x + dx * t, a.y + dy * t, 'terrain-dirt', 76, 4, angle);
         }
       }
     }
 
-    // The central square is a tiled cobblestone plaza, with dirt tile seams to
-    // blend into the road network.
+    // Central village plaza made from the provided cobblestone tile.
     for (let y = 1310; y <= 1570; y += 54) {
       for (let x = 1880; x <= 2216; x += 54) {
         const dx = (x - 2048) / 178;
         const dy = (y - 1440) / 140;
-        if (dx * dx + dy * dy <= 1.12) {
-          stamp(x, y, 'terrain-cobble', 62, 5);
-        }
+        if (dx * dx + dy * dy <= 1.12) stamp(x, y, 'terrain-cobble', 62, 5);
       }
     }
 
-    // Small tiled landing at the southern spawn.
+    // Cobblestone arrival pad at the southern entrance.
     for (let y = 2710; y <= 2790; y += 48) {
-      for (let x = 1950; x <= 2146; x += 48) {
-        stamp(x, y, 'terrain-cobble', 54, 5);
-      }
+      for (let x = 1950; x <= 2146; x += 48) stamp(x, y, 'terrain-cobble', 54, 5);
     }
-  }
-
-fillCircle(VILLAGE.spawn.x, VILLAGE.spawn.y, 48);
   }
 
   private buildBridgesAndDocks(): void {
