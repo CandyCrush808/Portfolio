@@ -99,9 +99,10 @@ export class WorldScene extends Phaser.Scene {
     camera.setBounds(0, 0, VILLAGE.width, VILLAGE.height);
 
     const getWorldZoom = (): number => {
-      if (window.innerWidth <= 600) return 0.85;
-      if (window.innerWidth <= 900) return 0.92;
-      return 1.0;
+      // Keep the village readable as a whole instead of framing only the player.
+      if (window.innerWidth <= 600) return 0.34;
+      if (window.innerWidth <= 900) return 0.38;
+      return 0.42;
     };
 
     camera.setZoom(getWorldZoom());
