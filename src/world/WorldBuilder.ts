@@ -68,10 +68,19 @@ export class WorldBuilder {
     };
 
     for (const b of VILLAGE.buildings) {
+      const texture = scene.textures.get(b.texture);
+      const source = texture.getSourceImage() as HTMLImageElement;
+      const sourceWidth = source.width || b.width;
+      const sourceHeight = source.height || b.height;
+      const fit = Math.min(b.width / sourceWidth, b.height / sourceHeight);
+      const displayWidth = sourceWidth * fit;
+      const displayHeight = sourceHeight * fit;
+      // Preserve the original artwork's aspect ratio and anchor the building to its
+      // ground/door edge instead of stretching it into a rectangular panel.
       const sprite = scene.add
-        .image(b.x, b.y, b.texture)
+        .image(b.x + (b.width - displayWidth) / 2, b.y + b.height - displayHeight, b.texture)
         .setOrigin(0, 0)
-        .setDisplaySize(b.width, b.height)
+        .setDisplaySize(displayWidth, displayHeight)
         .setDepth(b.y + b.height);
 
       sprite.setData('buildingId', b.id);
@@ -305,7 +314,7 @@ export class WorldBuilder {
     const paths = scene.add.graphics().setDepth(1);
 
     // Warm dirt path base border
-    paths.lineStyle(84, 0x9b7a54, 1);
+    paths.lineStyle(48, 0x9b7a54, 1);
     for (const route of VILLAGE.paths) {
       const start = route[0];
       if (!start || route.length < 2) continue;
@@ -316,7 +325,7 @@ export class WorldBuilder {
     }
 
     // Golden dirt path surface
-    paths.lineStyle(72, 0xd9be8e, 1);
+    paths.lineStyle(38, 0xd9be8e, 1);
     for (const route of VILLAGE.paths) {
       const start = route[0];
       if (!start || route.length < 2) continue;
@@ -329,18 +338,18 @@ export class WorldBuilder {
     // Plaza Circle & Cobblestone Ring
     // Outer stone ring
     paths.fillStyle(0x94826d, 1);
-    paths.fillCircle(2048, 1440, 230);
+    paths.fillCircle(2048, 1440, 172);
     // Cobblestone plaza surface
     paths.fillStyle(0xd9be8e, 1);
-    paths.fillCircle(2048, 1440, 214);
+    paths.fillCircle(2048, 1440, 158);
     // Cobblestone paver details
     paths.lineStyle(2, 0xbda275, 0.6);
-    paths.strokeCircle(2048, 1440, 160);
-    paths.strokeCircle(2048, 1440, 110);
+    paths.strokeCircle(2048, 1440, 118);
+    paths.strokeCircle(2048, 1440, 78);
 
     // Southern spawn circle
     paths.fillStyle(0xd9be8e, 1);
-    paths.fillCircle(VILLAGE.spawn.x, VILLAGE.spawn.y, 80);
+    paths.fillCircle(VILLAGE.spawn.x, VILLAGE.spawn.y, 48);
   }
 
   private buildBridgesAndDocks(): void {
