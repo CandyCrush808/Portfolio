@@ -372,7 +372,9 @@ export class WorldBuilder {
         const dy = b.y - a.y;
         const distance = Math.hypot(dx, dy);
         const steps = Math.max(1, Math.ceil(distance / 28));
-        const angle = Math.atan2(dy, dx) * 0.06;
+        // Terrain tiles are directional artwork; keep every tile upright.
+        // Route geometry is created by tile placement, not by rotating the sprites.
+        const angle = 0;
         for (let step = 0; step <= steps; step++) {
           const t = step / steps;
           // Alternate between dirt variants for natural variation
