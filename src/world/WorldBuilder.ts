@@ -22,15 +22,12 @@ export class WorldBuilder {
     const { scene } = this;
     this.createWorldCanvasTextures();
 
-    // 1. Base Ground (Lush pixel-art grass with coordinate-seeded variations)
-    // Repeat a small grass tile across the world instead of allocating one 4096x3072 texture.
-    // Large generated textures can fail on some browser/GPU combinations and expose the navy background.
-    scene.add
-      .tileSprite(0, 0, VILLAGE.width, VILLAGE.height, 'village-ground')
-      .setOrigin(0, 0)
-      .setDepth(-10);
+    // Use the supplied pixel-art terrain atlas for the actual ground, paths and water.
+    // No procedural/vector ground colours: the scene is composed from the audited image assets.
+    this.registerTerrainFrames();
+    this.buildTerrainGround();
 
-    // 2. Water Bodies (River and Southwest Pond)
+    // 2. Water Bodies built from the real terrain atlas tiles.
     this.buildWaterBodies();
 
     // 3. Dirt Path Network & Cobblestone Plaza
@@ -136,29 +133,8 @@ export class WorldBuilder {
   private createWorldCanvasTextures(): void {
     const { scene } = this;
 
-    // 1. Seam-safe 128x128 grass tile repeated over the full 4096x3072 world.
-    const ground = scene.make.graphics({ x: 0, y: 0 });
-    ground.fillGradientStyle(0x5a9e47, 0x5a9e47, 0x4f8e3c, 0x4f8e3c, 1);
-    ground.fillRect(0, 0, 128, 128);
-
-    // Deterministic grass details kept away from tile edges to avoid obvious seams.
-    for (let y = 8; y < 120; y += 12) {
-      for (let x = 8; x < 120; x += 12) {
-        const n = (x * 37 + y * 53) % 17;
-        if (n < 5) {
-          ground.fillStyle(n === 0 ? 0x447d33 : 0x6bb354, 0.55);
-          ground.fillRect(x, y, 3, 2);
-          ground.fillRect(x + 1, y - 2, 2, 2);
-        } else if (n === 7) {
-          ground.fillStyle(0xf7e879, 0.55);
-          ground.fillRect(x + 2, y + 2, 2, 2);
-        }
-      }
-    }
-    ground.generateTexture('village-ground', 128, 128);
-    ground.destroy();
-
-    // 2. Notice board texture
+    // Small utility sprites that do not exist in the supplied art pack.
+    // The terrain, path, water, buildings and environmental props all use image assets.
     const nb = scene.make.graphics({ x: 0, y: 0 });
     nb.fillStyle(0x563820).fillRect(6, 18, 5, 20).fillRect(25, 18, 5, 20);
     nb.fillStyle(0x69402f).fillRect(2, 2, 32, 22);
@@ -169,7 +145,6 @@ export class WorldBuilder {
     nb.generateTexture('village-notice-board', 36, 42);
     nb.destroy();
 
-    // 3. Stone steps texture
     const st = scene.make.graphics({ x: 0, y: 0 });
     st.fillStyle(0x8a9199).fillRect(0, 0, 160, 20);
     st.fillStyle(0x767d84).fillRect(10, 20, 140, 20);
@@ -179,98 +154,98 @@ export class WorldBuilder {
     st.destroy();
   }
 
+  private registerTerrainFrames(): void {
+    const atlas = this.scene.textures.get('terrain-atlas');
+    const frames = [
+      ['terrain-grass', 0, 0, 72, 77],
+      ['terrain-grass-2', 237, 0, 70, 77],
+      ['terrain-grass-3', 474, 0, 71, 77],
+      ['terrain-dirt', 238, 81, 69, 73],
+      ['terrain-cobble', 3, 158, 65, 69],
+      ['terrain-water', 0, 309, 67, 68],
+      ['terrain-water-2', 85, 309, 62, 69],
+      ['terrain-water-edge', 0, 385, 73, 74],
+      ['terrain-water-edge-2', 245, 385, 62, 74],
+      ['terrain-vegetation', 242, 699, 57, 60],
+    ] as const;
+    for (const [key, x, y, width, height] of frames) {
+      if (!atlas.has(key)) atlas.add(key, 0, x, y, width, height);
+    }
+  }
+
+  private buildTerrainGround(): void {
+    const { scene } = this;
+    // One repeating, real grass tile keeps draw calls low on the 4096x3072 world.
+    scene.add.tileSprite(0, 0, VILLAGE.width, VILLAGE.height, 'terrain-atlas', 'terrain-grass')
+      .setOrigin(0, 0)
+      .setDepth(-20);
+
+    // Lightly vary the grass using other supplied grass/vegetation frames so the
+    // world does not look like a flat procedural colour field.
+    let seed = 37;
+    const rand = (): number => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
+    for (let i = 0; i < 220; i += 1) {
+      const x = 170 + rand() * (VILLAGE.width - 340);
+      const y = 170 + rand() * (VILLAGE.height - 340);
+      const key = rand() > 0.55 ? 'terrain-grass-2' : 'terrain-grass-3';
+      scene.add.image(x, y, 'terrain-atlas', key)
+        .setOrigin(0.5, 0.5)
+        .setAlpha(0.35 + rand() * 0.3)
+        .setDepth(-19);
+    }
+  }
+
   private buildWaterBodies(): void {
     const { scene } = this;
-    const waterGfx = scene.add.graphics().setDepth(2);
-
-    // A. Southwest Tranquil Pond
-    // Deep turquoise pond base
-    waterGfx.fillStyle(0x1a8791, 0.95);
-    waterGfx.fillEllipse(950, 2300, 680, 440);
-    // Inner vibrant turquoise shimmer
-    waterGfx.fillStyle(0x2cb8aa, 0.85);
-    waterGfx.fillEllipse(950, 2300, 600, 380);
-    // Pond bank ring
-    waterGfx.lineStyle(12, 0x3c7042, 0.7);
-    waterGfx.strokeEllipse(950, 2300, 692, 452);
-
-    // B. Eastern River
-    // River body flowing smoothly from NE to SE
-    waterGfx.fillStyle(0x1a8791, 0.95);
-    waterGfx.beginPath();
-    waterGfx.moveTo(3360, 0);
-    waterGfx.lineTo(3600, 0);
-    waterGfx.lineTo(3580, 600);
-    waterGfx.lineTo(3520, 1200);
-    waterGfx.lineTo(3480, 1800);
-    waterGfx.lineTo(3440, 2400);
-    waterGfx.lineTo(3560, 3072);
-    waterGfx.lineTo(3320, 3072);
-    waterGfx.lineTo(3220, 2400);
-    waterGfx.lineTo(3260, 1800);
-    waterGfx.lineTo(3300, 1200);
-    waterGfx.lineTo(3360, 600);
-    waterGfx.closePath();
-    waterGfx.fillPath();
-
-    // Inner bright turquoise ribbon
-    waterGfx.fillStyle(0x2cb8aa, 0.85);
-    waterGfx.beginPath();
-    waterGfx.moveTo(3390, 0);
-    waterGfx.lineTo(3570, 0);
-    waterGfx.lineTo(3540, 600);
-    waterGfx.lineTo(3480, 1200);
-    waterGfx.lineTo(3440, 1800);
-    waterGfx.lineTo(3400, 2400);
-    waterGfx.lineTo(3520, 3072);
-    waterGfx.lineTo(3360, 3072);
-    waterGfx.lineTo(3260, 2400);
-    waterGfx.lineTo(3300, 1800);
-    waterGfx.lineTo(3340, 1200);
-    waterGfx.lineTo(3400, 600);
-    waterGfx.closePath();
-    waterGfx.fillPath();
-
-    // Natural river banks
-    waterGfx.lineStyle(14, 0x3c7042, 0.65);
-    waterGfx.strokePath();
-
-    // C. Animated Water Surface Ripples (glistening highlights)
-    const ripples = scene.add.graphics().setDepth(2.5);
-    const drawRipples = (): void => {
-      ripples.clear();
-      ripples.lineStyle(3, 0x76ecdc, 0.75);
-
-      // Pond ripples
-      for (const [rx, ry, rw] of [
-        [800, 2220, 48], [920, 2180, 64], [1080, 2240, 56],
-        [880, 2340, 60], [1020, 2380, 52], [760, 2300, 44],
-        [940, 2420, 68], [1120, 2320, 46],
-      ]) {
-        ripples.beginPath();
-        ripples.moveTo(rx - rw / 2, ry);
-        ripples.lineTo(rx + rw / 2, ry);
-        ripples.strokePath();
-      }
-
-      // River ripples along the flow
-      for (const [rx, ry, rw] of [
-        [3460, 250, 60], [3480, 400, 55], [3440, 750, 65],
-        [3400, 1000, 58], [3380, 1250, 62], [3370, 1550, 66],
-        [3350, 1900, 58], [3330, 2200, 64], [3380, 2650, 62],
-        [3420, 2900, 68],
-      ]) {
-        ripples.beginPath();
-        ripples.moveTo(rx - rw / 2, ry);
-        ripples.lineTo(rx + rw / 2, ry);
-        ripples.strokePath();
-      }
+    const tile = (x: number, y: number, frame: string, size = 70, depth = 0): void => {
+      scene.add.image(x, y, 'terrain-atlas', frame)
+        .setDisplaySize(size, size)
+        .setOrigin(0.5, 0.5)
+        .setDepth(depth);
     };
-    drawRipples();
 
-    // Shimmering water ripple oscillation
-    scene.tweens.add({
-      targets: ripples,
+    // Southwest pond: compose a soft, irregular lake from actual water tiles.
+    for (let y = 2070; y <= 2500; y += 58) {
+      for (let x = 660; x <= 1300; x += 58) {
+        const nx = (x - 980) / 330;
+        const ny = (y - 2290) / 220;
+        const distance = nx * nx + ny * ny;
+        if (distance <= 1.08) {
+          const frame = ((Math.floor(x / 58) + Math.floor(y / 58)) % 3 === 0)
+            ? 'terrain-water-2' : 'terrain-water';
+          tile(x, y, frame, 64, 1);
+        } else if (distance <= 1.35 && (Math.floor(x / 58) + Math.floor(y / 58)) % 2 === 0) {
+          tile(x, y, 'terrain-water-edge', 66, 1.5);
+        }
+      }
+    }
+
+    // Eastern river: a gently winding ribbon of tiled water, bordered with the
+    // real water-edge art. Bridge sprites are layered above it later.
+    for (let y = 10; y < VILLAGE.height; y += 58) {
+      const centerX = 3420 + Math.sin(y / 390) * 85 + Math.sin(y / 170) * 22;
+      for (let x = centerX - 145; x <= centerX + 145; x += 58) {
+        const edge = Math.abs(x - centerX) > 108;
+        const frame = edge
+          ? (((Math.floor(y / 58) + Math.floor(x / 58)) % 2 === 0) ? 'terrain-water-edge' : 'terrain-water-edge-2')
+          : (((Math.floor(y / 58) + Math.floor(x / 58)) % 3 === 0) ? 'terrain-water-2' : 'terrain-water');
+        tile(x, y, frame, 64, edge ? 1.5 : 1);
+      }
+    }
+
+    // Waterfalls use the supplied river/edge tiles rather than vector-filled blocks.
+    for (let i = 0; i < 4; i += 1) {
+      tile(3480 + i * 14, 58 + i * 34, i % 2 ? 'terrain-water-edge' : 'terrain-water', 62, 3);
+    }
+    for (let i = 0; i < 3; i += 1) {
+      tile(535 + i * 18, 2250 + i * 26, i % 2 ? 'terrain-water-edge' : 'terrain-water', 58, 3);
+    }
+  }
+
+ targets: ripples,
       alpha: 0.35,
       y: 4,
       duration: 1600,
@@ -311,45 +286,55 @@ export class WorldBuilder {
 
   private buildPathsAndPlaza(): void {
     const { scene } = this;
-    const paths = scene.add.graphics().setDepth(1);
+    const stamp = (x: number, y: number, frame: string, size = 68, depth = 4, angle = 0): void => {
+      scene.add.image(x, y, 'terrain-atlas', frame)
+        .setDisplaySize(size, size)
+        .setRotation(angle)
+        .setOrigin(0.5, 0.5)
+        .setDepth(depth);
+    };
 
-    // Warm dirt path base border
-    paths.lineStyle(48, 0x9b7a54, 1);
+    // Stamp dirt terrain tiles along each route. Short spacing creates a connected,
+    // naturally irregular path instead of thick vector strokes.
     for (const route of VILLAGE.paths) {
-      const start = route[0];
-      if (!start || route.length < 2) continue;
-      paths.beginPath();
-      paths.moveTo(start.x, start.y);
-      route.slice(1).forEach((p) => paths.lineTo(p.x, p.y));
-      paths.strokePath();
+      for (let i = 0; i < route.length - 1; i += 1) {
+        const a = route[i];
+        const b = route[i + 1];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const distance = Math.hypot(dx, dy);
+        const steps = Math.max(1, Math.ceil(distance / 42));
+        const angle = Math.atan2(dy, dx);
+        for (let step = 0; step <= steps; step += 1) {
+          const t = step / steps;
+          const x = a.x + dx * t;
+          const y = a.y + dy * t;
+          stamp(x, y, 'terrain-dirt', 76, 4, angle * 0.08);
+        }
+      }
     }
 
-    // Golden dirt path surface
-    paths.lineStyle(38, 0xd9be8e, 1);
-    for (const route of VILLAGE.paths) {
-      const start = route[0];
-      if (!start || route.length < 2) continue;
-      paths.beginPath();
-      paths.moveTo(start.x, start.y);
-      route.slice(1).forEach((p) => paths.lineTo(p.x, p.y));
-      paths.strokePath();
+    // The central square is a tiled cobblestone plaza, with dirt tile seams to
+    // blend into the road network.
+    for (let y = 1310; y <= 1570; y += 54) {
+      for (let x = 1880; x <= 2216; x += 54) {
+        const dx = (x - 2048) / 178;
+        const dy = (y - 1440) / 140;
+        if (dx * dx + dy * dy <= 1.12) {
+          stamp(x, y, 'terrain-cobble', 62, 5);
+        }
+      }
     }
 
-    // Plaza Circle & Cobblestone Ring
-    // Outer stone ring
-    paths.fillStyle(0x94826d, 1);
-    paths.fillCircle(2048, 1440, 172);
-    // Cobblestone plaza surface
-    paths.fillStyle(0xd9be8e, 1);
-    paths.fillCircle(2048, 1440, 158);
-    // Cobblestone paver details
-    paths.lineStyle(2, 0xbda275, 0.6);
-    paths.strokeCircle(2048, 1440, 118);
-    paths.strokeCircle(2048, 1440, 78);
+    // Small tiled landing at the southern spawn.
+    for (let y = 2710; y <= 2790; y += 48) {
+      for (let x = 1950; x <= 2146; x += 48) {
+        stamp(x, y, 'terrain-cobble', 54, 5);
+      }
+    }
+  }
 
-    // Southern spawn circle
-    paths.fillStyle(0xd9be8e, 1);
-    paths.fillCircle(VILLAGE.spawn.x, VILLAGE.spawn.y, 48);
+fillCircle(VILLAGE.spawn.x, VILLAGE.spawn.y, 48);
   }
 
   private buildBridgesAndDocks(): void {
