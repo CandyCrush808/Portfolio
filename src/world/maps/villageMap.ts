@@ -1,304 +1,287 @@
 import type { VillageBuilding, VillageProp, WorldPoint, WaterBody } from '../worldTypes';
 
+// Compact cozy farming village — 2048 × 1536 world
+// Player at 0.35 scale (50×62 px display) appears correctly sized against
+// 128-px paths, 160-px buildings and 90-px trees.
 export const VILLAGE = {
-  width: 4096,
-  height: 3072,
-  spawn: { x: 2048, y: 2650 } as WorldPoint,
+  width: 2048,
+  height: 1536,
+  spawn: { x: 1024, y: 1380 } as WorldPoint,
 
-  // Connected hand-drawn path network
+  // ── Connected hand-drawn path network ─────────────────────────────────────
   paths: [
-    // 1. Southern Entrance Avenue (Spawn to Plaza)
-    [{ x: 2048, y: 2750 }, { x: 2048, y: 2650 }, { x: 2048, y: 2350 }, { x: 2048, y: 1950 }, { x: 2048, y: 1660 }],
+    // 1. South entrance path (spawn → village center)
+    [{ x: 1024, y: 1420 }, { x: 1024, y: 1320 }, { x: 1024, y: 1150 }, { x: 1024, y: 960 }],
 
-    // 2. Main Plaza Circular Loop
-    [{ x: 2048, y: 1660 }, { x: 1860, y: 1560 }, { x: 1820, y: 1440 }, { x: 1860, y: 1320 }, { x: 2048, y: 1220 }, { x: 2236, y: 1320 }, { x: 2276, y: 1440 }, { x: 2236, y: 1560 }, { x: 2048, y: 1660 }],
+    // 2. Center crossroads loop around farm market
+    [{ x: 1024, y: 960 }, { x: 860, y: 900 }, { x: 760, y: 800 }, { x: 860, y: 700 }, { x: 1024, y: 660 }, { x: 1188, y: 700 }, { x: 1288, y: 800 }, { x: 1188, y: 900 }, { x: 1024, y: 960 }],
 
     // 3. North path to Projects Workshop
-    [{ x: 2048, y: 1220 }, { x: 2048, y: 1040 }, { x: 2048, y: 880 }],
+    [{ x: 1024, y: 660 }, { x: 1024, y: 520 }, { x: 1024, y: 380 }],
 
-    // 4. Northwest path to Skills Library & Decorative House 1
-    [{ x: 2048, y: 1040 }, { x: 1680, y: 1000 }, { x: 1368, y: 900 }],
-    [{ x: 1368, y: 900 }, { x: 1020, y: 920 }, { x: 648, y: 960 }],
+    // 4. Northwest path to Skills Library
+    [{ x: 860, y: 700 }, { x: 680, y: 620 }, { x: 500, y: 520 }, { x: 360, y: 460 }],
 
-    // 5. Northeast path to Experience Guild Hall
-    [{ x: 2048, y: 1040 }, { x: 2420, y: 980 }, { x: 2848, y: 860 }],
+    // 5. West path to About Me Cottage
+    [{ x: 760, y: 800 }, { x: 580, y: 800 }, { x: 420, y: 800 }, { x: 280, y: 820 }],
 
-    // 6. West path to About Me Cottage & Decorative House 2
-    [{ x: 1820, y: 1440 }, { x: 1450, y: 1480 }, { x: 1068, y: 1540 }],
-    [{ x: 1068, y: 1540 }, { x: 800, y: 1580 }, { x: 508, y: 1700 }],
+    // 6. Northeast path to Experience Guild Hall
+    [{ x: 1188, y: 700 }, { x: 1400, y: 620 }, { x: 1580, y: 540 }, { x: 1720, y: 480 }],
 
-    // 7. Southwest path from About Me to Tranquil Pond & Fishing Dock
-    [{ x: 1068, y: 1540 }, { x: 1068, y: 1850 }, { x: 1000, y: 2180 }],
+    // 7. East path to Services Market
+    [{ x: 1288, y: 800 }, { x: 1460, y: 800 }, { x: 1640, y: 810 }, { x: 1780, y: 820 }],
 
-    // 8. East path to Services Market
-    [{ x: 2276, y: 1440 }, { x: 2460, y: 1480 }, { x: 2648, y: 1540 }],
+    // 8. Southeast path to Contact Inn
+    [{ x: 1188, y: 900 }, { x: 1360, y: 980 }, { x: 1520, y: 1080 }, { x: 1660, y: 1150 }],
 
-    // 9. South path from Services Market to Contact Inn
-    [{ x: 2648, y: 1540 }, { x: 2720, y: 1850 }, { x: 2808, y: 2220 }],
+    // 9. Southwest path to pond area
+    [{ x: 860, y: 900 }, { x: 700, y: 1000 }, { x: 560, y: 1120 }, { x: 440, y: 1220 }],
 
-    // 10. Southwest path from Contact Inn back to Main Avenue
-    [{ x: 2808, y: 2220 }, { x: 2500, y: 2360 }, { x: 2048, y: 2450 }],
-
-    // 11. Paths to River Bridges
-    [{ x: 2848, y: 860 }, { x: 3150, y: 700 }, { x: 3450, y: 500 }], // Northeast Bridge
-    [{ x: 2648, y: 1540 }, { x: 2980, y: 1460 }, { x: 3300, y: 1380 }], // Eastern Market Bridge
-    [{ x: 2808, y: 2220 }, { x: 3050, y: 2380 }, { x: 3250, y: 2450 }], // Southeast River Bridge
+    // 10. South border path (east)
+    [{ x: 1024, y: 1320 }, { x: 1200, y: 1340 }, { x: 1380, y: 1360 }, { x: 1520, y: 1350 }],
   ] as WorldPoint[][],
 
+  // ── Portfolio Buildings ────────────────────────────────────────────────────
   buildings: [
     {
       id: 'about',
       label: 'About Me Cottage',
       texture: 'building-about-me',
-      x: 920,
-      y: 1220,
-      width: 296,
-      height: 320,
-      door: { x: 1068, y: 1540 },
+      x: 180,
+      y: 640,
+      width: 220,
+      height: 230,
+      door: { x: 290, y: 820 },
       collision: [
-        { x: 935, y: 1400, width: 100, height: 130 },
-        { x: 1105, y: 1400, width: 100, height: 130 },
+        { x: 190, y: 780, width: 70, height: 50 },
+        { x: 330, y: 780, width: 70, height: 50 },
       ],
     },
     {
       id: 'projects',
       label: 'Projects Workshop',
       texture: 'building-projects',
-      x: 1900,
-      y: 560,
-      width: 296,
-      height: 320,
-      door: { x: 2048, y: 880 },
+      x: 914,
+      y: 220,
+      width: 220,
+      height: 230,
+      door: { x: 1024, y: 380 },
       collision: [
-        { x: 1915, y: 740, width: 100, height: 130 },
-        { x: 2085, y: 740, width: 100, height: 130 },
+        { x: 924, y: 360, width: 70, height: 50 },
+        { x: 1064, y: 360, width: 70, height: 50 },
       ],
     },
     {
       id: 'skills',
       label: 'Skills Library',
       texture: 'building-skills',
-      x: 1220,
-      y: 580,
-      width: 296,
-      height: 320,
-      door: { x: 1368, y: 900 },
+      x: 248,
+      y: 320,
+      width: 220,
+      height: 230,
+      door: { x: 358, y: 460 },
       collision: [
-        { x: 1235, y: 760, width: 100, height: 130 },
-        { x: 1405, y: 760, width: 100, height: 130 },
+        { x: 258, y: 440, width: 70, height: 50 },
+        { x: 398, y: 440, width: 70, height: 50 },
       ],
     },
     {
       id: 'experience',
       label: 'Experience Guild Hall',
       texture: 'building-guild-hall',
-      x: 2700,
-      y: 540,
-      width: 296,
-      height: 320,
-      door: { x: 2848, y: 860 },
+      x: 1612,
+      y: 320,
+      width: 220,
+      height: 230,
+      door: { x: 1722, y: 480 },
       collision: [
-        { x: 2715, y: 720, width: 100, height: 130 },
-        { x: 2885, y: 720, width: 100, height: 130 },
+        { x: 1622, y: 460, width: 70, height: 50 },
+        { x: 1762, y: 460, width: 70, height: 50 },
       ],
     },
     {
       id: 'services',
       label: 'Services Market',
       texture: 'building-services',
-      x: 2500,
-      y: 1220,
-      width: 296,
-      height: 320,
-      door: { x: 2648, y: 1540 },
+      x: 1672,
+      y: 660,
+      width: 220,
+      height: 230,
+      door: { x: 1782, y: 820 },
       collision: [
-        { x: 2515, y: 1400, width: 100, height: 130 },
-        { x: 2685, y: 1400, width: 100, height: 130 },
+        { x: 1682, y: 800, width: 70, height: 50 },
+        { x: 1822, y: 800, width: 70, height: 50 },
       ],
     },
     {
       id: 'contact',
       label: 'Contact Inn',
       texture: 'building-contact',
-      x: 2660,
-      y: 1900,
-      width: 296,
-      height: 320,
-      door: { x: 2808, y: 2220 },
+      x: 1552,
+      y: 1000,
+      width: 220,
+      height: 230,
+      door: { x: 1662, y: 1150 },
       collision: [
-        { x: 2675, y: 2080, width: 100, height: 130 },
-        { x: 2845, y: 2080, width: 100, height: 130 },
+        { x: 1562, y: 1130, width: 70, height: 50 },
+        { x: 1702, y: 1130, width: 70, height: 50 },
       ],
     },
     {
       id: 'house1',
-      label: 'Decorative Cottage 1',
+      label: 'Farmhand Cottage',
       texture: 'building-house-1',
-      x: 500,
-      y: 640,
-      width: 296,
-      height: 320,
-      door: { x: 648, y: 960 },
+      x: 820,
+      y: 1280,
+      width: 180,
+      height: 180,
+      door: { x: 910, y: 1380 },
       collision: [
-        { x: 515, y: 820, width: 100, height: 130 },
-        { x: 685, y: 820, width: 100, height: 130 },
+        { x: 830, y: 1360, width: 55, height: 40 },
+        { x: 960, y: 1360, width: 55, height: 40 },
       ],
     },
     {
       id: 'house2',
-      label: 'Decorative Cottage 2',
+      label: 'Village Homestead',
       texture: 'building-house-2',
-      x: 360,
-      y: 1380,
-      width: 296,
-      height: 320,
-      door: { x: 508, y: 1700 },
+      x: 1160,
+      y: 1280,
+      width: 180,
+      height: 180,
+      door: { x: 1250, y: 1380 },
       collision: [
-        { x: 375, y: 1560, width: 100, height: 130 },
-        { x: 545, y: 1560, width: 100, height: 130 },
+        { x: 1170, y: 1360, width: 55, height: 40 },
+        { x: 1300, y: 1360, width: 55, height: 40 },
       ],
     },
   ] as VillageBuilding[],
 
+  // ── Water bodies ──────────────────────────────────────────────────────────
   waterBodies: [
     {
       id: 'pond',
-      type: 'pond',
-      x: 950,
-      y: 2300,
-      width: 680,
-      height: 440,
+      type: 'pond' as const,
+      x: 380,
+      y: 1080,
+      width: 280,
+      height: 200,
     },
     {
-      id: 'river-main',
-      type: 'river',
-      x: 3420,
-      y: 1536,
-      width: 220,
-      height: 3072,
-    },
-    {
-      id: 'waterfall-ne',
-      type: 'waterfall',
-      x: 3480,
-      y: 80,
-      width: 140,
-      height: 160,
-    },
-    {
-      id: 'waterfall-sw',
-      type: 'waterfall',
-      x: 520,
-      y: 2250,
-      width: 140,
-      height: 140,
+      id: 'stream',
+      type: 'river' as const,
+      x: 1900,
+      y: 768,
+      width: 100,
+      height: 1536,
     },
   ] as WaterBody[],
 
+  // ── Bridges ───────────────────────────────────────────────────────────────
   bridges: [
-    { id: 'bridge-ne', x: 3450, y: 500, width: 160, height: 70, orientation: 'horizontal' as const },
-    { id: 'bridge-e', x: 3300, y: 1380, width: 160, height: 70, orientation: 'horizontal' as const },
-    { id: 'bridge-se', x: 3250, y: 2450, width: 70, height: 160, orientation: 'vertical' as const },
+    { id: 'bridge-east', x: 1900, y: 820, width: 100, height: 60, orientation: 'horizontal' as const },
+    { id: 'bridge-east-2', x: 1900, y: 1150, width: 100, height: 60, orientation: 'horizontal' as const },
   ],
 
+  // ── Props ─────────────────────────────────────────────────────────────────
   props: [
-    // Stone Fountain in Main Plaza
-    { texture: 'prop-fountain', x: 2048, y: 1440, depth: 'sort' as const, collision: { width: 90, height: 80 } },
+    // Central fountain at village crossroads
+    { texture: 'prop-fountain', x: 1024, y: 800, depth: 'sort' as const, collision: { width: 70, height: 60 } },
 
-    // Entrance Arch & Steps
-    { texture: 'prop-arch', x: 2048, y: 2520, depth: 'sort' as const, collision: { width: 120, height: 24 } },
-    { texture: 'stone-steps', x: 2048, y: 2800, depth: 'ground' as const },
+    // Village entrance arch at south
+    { texture: 'prop-arch', x: 1024, y: 1460, depth: 'sort' as const, collision: { width: 100, height: 20 } },
 
-    // Fishing Dock & Rowboat
-    { texture: 'prop-dock', x: 1000, y: 2220, depth: 'sort' as const, collision: { width: 50, height: 80 } },
-    { texture: 'prop-boat', x: 3150, y: 2480, depth: 'sort' as const, collision: { width: 60, height: 40 } },
+    // Fishing dock at pond
+    { texture: 'prop-dock', x: 450, y: 1130, depth: 'sort' as const },
+    { texture: 'prop-boat', x: 340, y: 1110, depth: 'sort' as const, collision: { width: 50, height: 35 } },
 
-    // Streetlamps along paths and plaza
-    { texture: 'prop-lamp', x: 2000, y: 2600, depth: 'sort' as const, collision: { width: 16, height: 16 } },
-    { texture: 'prop-lamp', x: 2096, y: 2600, depth: 'sort' as const, collision: { width: 16, height: 16 } },
-    { texture: 'prop-lamp', x: 2000, y: 2150, depth: 'sort' as const, collision: { width: 16, height: 16 } },
-    { texture: 'prop-lamp', x: 2096, y: 2150, depth: 'sort' as const, collision: { width: 16, height: 16 } },
-    { texture: 'prop-lamp', x: 1940, y: 1380, depth: 'sort' as const, collision: { width: 16, height: 16 } },
-    { texture: 'prop-lamp', x: 2156, y: 1380, depth: 'sort' as const, collision: { width: 16, height: 16 } },
-    { texture: 'prop-lamp', x: 1940, y: 1500, depth: 'sort' as const, collision: { width: 16, height: 16 } },
-    { texture: 'prop-lamp', x: 2156, y: 1500, depth: 'sort' as const, collision: { width: 16, height: 16 } },
-    { texture: 'prop-lamp', x: 1980, y: 920, depth: 'sort' as const, collision: { width: 16, height: 16 } },
-    { texture: 'prop-lamp', x: 2116, y: 920, depth: 'sort' as const, collision: { width: 16, height: 16 } },
-    { texture: 'prop-lamp', x: 1300, y: 940, depth: 'sort' as const, collision: { width: 16, height: 16 } },
-    { texture: 'prop-lamp', x: 2780, y: 900, depth: 'sort' as const, collision: { width: 16, height: 16 } },
-    { texture: 'prop-lamp', x: 2580, y: 1580, depth: 'sort' as const, collision: { width: 16, height: 16 } },
-    { texture: 'prop-lamp', x: 2740, y: 2260, depth: 'sort' as const, collision: { width: 16, height: 16 } },
-    { texture: 'prop-lamp', x: 1000, y: 1580, depth: 'sort' as const, collision: { width: 16, height: 16 } },
-    { texture: 'prop-lamp', x: 3340, y: 530, depth: 'sort' as const, collision: { width: 16, height: 16 } },
-    { texture: 'prop-lamp', x: 3190, y: 1410, depth: 'sort' as const, collision: { width: 16, height: 16 } },
-
-    // Benches in plaza and along paths
-    { texture: 'prop-bench', x: 1880, y: 1440, depth: 'sort' as const, collision: { width: 44, height: 20 } },
-    { texture: 'prop-bench', x: 2216, y: 1440, depth: 'sort' as const, collision: { width: 44, height: 20 } },
-    { texture: 'prop-bench', x: 2048, y: 1720, depth: 'sort' as const, collision: { width: 44, height: 20 } },
-    { texture: 'prop-bench', x: 1068, y: 1630, depth: 'sort' as const, collision: { width: 44, height: 20 } },
-    { texture: 'prop-bench', x: 2650, y: 2260, depth: 'sort' as const, collision: { width: 44, height: 20 } },
-
-    // Fences
+    // Street lamps — placed at path intersections & building fronts
     ...[
-      [820, 1180], [884, 1180], [1220, 1180], [1284, 1180],
-      [400, 600], [464, 600], [800, 600], [864, 600],
-      [1800, 520], [1864, 520], [2200, 520], [2264, 520],
-      [2600, 500], [2664, 500], [3000, 500], [3064, 500],
-      [2400, 1180], [2464, 1180], [2800, 1180], [2864, 1180],
-      [1940, 2480], [2156, 2480],
-    ].map(([x, y]) => ({ texture: 'prop-fence-h', x, y, depth: 'sort' as const, collision: { width: 64, height: 18 } })),
+      [1024, 1260], [1024, 1080],
+      [960, 800], [1088, 800],
+      [960, 640], [1088, 640],
+      [370, 480], [520, 800],
+      [1680, 500], [1740, 820],
+      [1600, 1100],
+      [860, 940], [1188, 940],
+    ].map(([x, y]) => ({ texture: 'prop-lamp', x, y, depth: 'sort' as const, collision: { width: 14, height: 14 } })),
 
-    // Trees (Oak and Pine) forming borders and village groves
+    // Benches near fountain and paths
+    { texture: 'prop-bench', x: 900, y: 800, depth: 'sort' as const, collision: { width: 44, height: 18 } },
+    { texture: 'prop-bench', x: 1148, y: 800, depth: 'sort' as const, collision: { width: 44, height: 18 } },
+    { texture: 'prop-bench', x: 1024, y: 1020, depth: 'sort' as const, collision: { width: 44, height: 18 } },
+
+    // ── Fences enclosing crop plots (east farm area) ────────────────────────
+    // Crop plot 1 — north crop field (top side)
     ...[
-      // Northern border forest
-      [200, 200], [380, 180], [560, 210], [740, 170], [920, 190], [1100, 170], [1280, 200],
-      [1460, 180], [1640, 210], [1820, 190], [2000, 180], [2180, 210], [2360, 180], [2540, 200],
-      [2720, 180], [2900, 210], [3080, 190], [3260, 200],
-      // Western border forest
-      [180, 400], [160, 600], [190, 800], [170, 1000], [180, 1200], [160, 1400], [180, 1600],
-      [190, 1800], [170, 2000], [180, 2500], [190, 2750], [200, 2950],
-      // Southern border forest
-      [400, 2950], [600, 2970], [800, 2950], [1000, 2960], [1200, 2950], [1400, 2970], [1600, 2950],
-      [1800, 2960], [2300, 2960], [2500, 2950], [2700, 2970], [2900, 2950], [3100, 2960],
-      // Eastern border beyond river
-      [3750, 400], [3800, 700], [3760, 1000], [3800, 1300], [3750, 1600], [3800, 1900], [3760, 2200], [3800, 2500], [3750, 2800],
-      // Village groves
-      [600, 1150], [750, 1320], [1450, 1250], [1600, 1150], [1650, 1350], [1550, 750],
-      [2380, 750], [2450, 1050], [2350, 1320], [2450, 1700], [2950, 1650], [3100, 1850],
-      [1450, 1750], [1650, 1950], [1500, 2200], [1700, 2400], [2350, 2200], [2550, 2500],
-      [750, 1950], [650, 2550], [1250, 2550], [1400, 2400],
+      [1090, 1180], [1150, 1180], [1210, 1180],
+      // right side handled by vertical fences → use prop-fence-v for sides
+    ].map(([x, y]) => ({ texture: 'prop-fence-h', x, y, depth: 'sort' as const, collision: { width: 60, height: 16 } })),
+
+    // Fence around about-me area
+    ...[
+      [200, 580], [260, 580], [320, 580],
+    ].map(([x, y]) => ({ texture: 'prop-fence-h', x, y, depth: 'sort' as const, collision: { width: 60, height: 16 } })),
+
+    // ── Trees — perimeter + grove clusters ────────────────────────────────
+    ...[
+      // North border
+      [100, 100], [240, 80], [400, 100], [560, 80], [720, 100], [880, 80],
+      [1160, 80], [1320, 100], [1480, 80], [1640, 100], [1800, 80], [1960, 100],
+      // West border
+      [80, 280], [80, 460], [80, 640], [80, 820], [80, 1000], [80, 1180], [80, 1380],
+      // East border (left of stream)
+      [1820, 280], [1820, 460], [1820, 640],
+      // South border
+      [120, 1460], [300, 1480], [500, 1460], [700, 1480],
+      [1380, 1480], [1580, 1460], [1780, 1480], [1920, 1460],
+      // Village groves and clusters
+      [310, 700], [340, 880], [300, 1100], [440, 360], [600, 300],
+      [1480, 360], [1580, 260], [1440, 620],
+      [680, 1000], [620, 1200], [1340, 1060], [1400, 1200],
+      [760, 480], [800, 280], [1200, 280], [1240, 480],
     ].map(([x, y], i) => ({
-      texture: i % 2 === 0 ? 'prop-tree-oak' : 'prop-tree-pine',
-      x,
-      y,
+      texture: i % 3 === 0 ? 'prop-tree-pine' : 'prop-tree-oak',
+      x, y,
       depth: 'sort' as const,
-      collision: { width: 36, height: 26 },
+      collision: { width: 30, height: 22 },
     })),
 
-    // Bushes and shrubs
+    // ── Bushes — decorative borders and garden edges ─────────────────────
     ...[
-      [860, 1540], [1260, 1540], [1820, 880], [2270, 880], [1150, 900], [1550, 900],
-      [2620, 860], [3020, 860], [2420, 1540], [2820, 1540], [2580, 2220], [2980, 2220],
-      [1940, 1750], [2156, 1750], [1750, 1440], [2346, 1440], [1980, 2680], [2116, 2680],
-    ].map(([x, y]) => ({ texture: 'prop-bush', x, y, depth: 'sort' as const, collision: { width: 32, height: 20 } })),
+      [380, 820], [480, 820], [560, 700], [540, 500],
+      [1460, 820], [1560, 700], [1560, 900],
+      [900, 1040], [1148, 1040],
+      [900, 620], [1148, 620],
+      [780, 700], [1270, 700],
+      [740, 900], [1310, 900],
+      [1680, 1060], [1560, 1060],
+      [520, 1060], [640, 1060],
+    ].map(([x, y]) => ({ texture: 'prop-bush', x, y, depth: 'sort' as const, collision: { width: 28, height: 18 } })),
 
-    // Flowerbeds along paths and gardens
+    // ── Flowerbeds — along paths and building gardens ─────────────────────
     ...[
-      [1920, 1600], [2176, 1600], [1920, 1280], [2176, 1280],
-      [1980, 1950], [2116, 1950], [1980, 2350], [2116, 2350],
-      [1068, 1420], [2648, 1420], [2808, 2100], [1368, 800], [2848, 760],
+      // Around fountain plaza
+      [940, 740], [1108, 740], [940, 860], [1108, 860],
+      // Along south entrance
+      [980, 1200], [1068, 1200],
+      // Near buildings
+      [290, 880], [1024, 420], [358, 500], [1722, 520],
+      [1782, 860], [1662, 1190],
+      // South cottages gardens
+      [870, 1270], [1210, 1270],
     ].map(([x, y]) => ({ texture: 'prop-flowerbed', x, y, depth: 'ground' as const })),
   ] as VillageProp[],
 
+  // ── Village points of interest (for minimap + zone system) ───────────────
   pointsOfInterest: [
-    { id: 'fountain', label: 'Central Fountain', x: 2048, y: 1440 },
-    { id: 'about', label: 'About Me Cottage', x: 1068, y: 1540 },
-    { id: 'projects', label: 'Projects Workshop', x: 2048, y: 880 },
-    { id: 'skills', label: 'Skills Library', x: 1368, y: 900 },
-    { id: 'experience', label: 'Experience Guild Hall', x: 2848, y: 860 },
-    { id: 'services', label: 'Services Market', x: 2648, y: 1540 },
-    { id: 'contact', label: 'Contact Inn', x: 2808, y: 2220 },
-    { id: 'pond', label: 'Tranquil Pond', x: 1000, y: 2220 },
+    { id: 'fountain', label: 'Central Fountain', x: 1024, y: 800 },
+    { id: 'about', label: 'About Me Cottage', x: 290, y: 820 },
+    { id: 'projects', label: 'Projects Workshop', x: 1024, y: 380 },
+    { id: 'skills', label: 'Skills Library', x: 358, y: 460 },
+    { id: 'experience', label: 'Experience Guild Hall', x: 1722, y: 480 },
+    { id: 'services', label: 'Services Market', x: 1782, y: 820 },
+    { id: 'contact', label: 'Contact Inn', x: 1662, y: 1150 },
+    { id: 'pond', label: 'Tranquil Pond', x: 440, y: 1120 },
   ],
 } as const;

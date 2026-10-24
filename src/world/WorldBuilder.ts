@@ -21,393 +21,522 @@ export class WorldBuilder {
     const { scene } = this;
     this.createWorldCanvasTextures();
 
-    // Use the supplied pixel-art terrain atlas for the actual ground, paths and water.
-    // No procedural/vector ground colours: the scene is composed from the audited image assets.
+    // 1. Register named frames from the terrain atlas
     this.registerTerrainFrames();
+
+    // 2. Continuous grass ground (no navy gaps)
     this.buildTerrainGround();
 
-    // 2. Water Bodies built from the real terrain atlas tiles.
+    // 3. Crop plots — cozy farm atmosphere
+    this.buildCropPlots();
+
+    // 4. Water bodies from real terrain tiles
     this.buildWaterBodies();
 
-    // 3. Dirt Path Network & Cobblestone Plaza
+    // 5. Dirt path network
     this.buildPathsAndPlaza();
 
-    // 4. Bridges & Docks
+    // 6. Bridges and dock crossings
     this.buildBridgesAndDocks();
 
-    // 5. Solid Collision Group
+    // 7. Solid collision group
     const solids = scene.physics.add.staticGroup();
     const addBox = (x: number, y: number, w: number, h: number, label: string): void => {
-      const obj = scene.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0).setOrigin(0.5).setVisible(false);
+      const obj = scene.add
+        .rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
+        .setOrigin(0.5)
+        .setVisible(false);
       scene.physics.add.existing(obj, true);
       (obj.body as Phaser.Physics.Arcade.StaticBody).setSize(w, h);
       obj.setData('collisionLabel', label);
       solids.add(obj);
     };
 
-    // 6. Perimeter Cliff / Boundary Collisions
+    // 8. World boundary collisions
     this.buildWorldBoundaries(addBox);
 
-    // 7. Water Collisions (Solid water body colliders with bridge cutouts)
+    // 9. Water collision blocks (with bridge cutouts)
     this.buildWaterCollisions(addBox);
 
-    // 8. Buildings
+    // 10. Buildings with signs
     const icons: Record<string, string> = {
-      about: '📜 ',
-      projects: '⚒ ',
-      skills: '⚔ ',
+      about:      '📜 ',
+      projects:   '⚒ ',
+      skills:     '⚔ ',
       experience: '🛡 ',
-      services: '⚖ ',
-      contact: '✉ ',
-      house1: '🏡 ',
-      house2: '🏠 ',
+      services:   '⚖ ',
+      contact:    '✉ ',
+      house1:     '🏡 ',
+      house2:     '🏠 ',
     };
 
     for (const b of VILLAGE.buildings) {
       const texture = scene.textures.get(b.texture);
       const source = texture.getSourceImage() as HTMLImageElement;
-      const sourceWidth = source.width || b.width;
-      const sourceHeight = source.height || b.height;
-      const fit = Math.min(b.width / sourceWidth, b.height / sourceHeight);
-      const displayWidth = sourceWidth * fit;
-      const displayHeight = sourceHeight * fit;
-      // Preserve the original artwork's aspect ratio and anchor the building to its
-      // ground/door edge instead of stretching it into a rectangular panel.
-      const sprite = scene.add
-        .image(b.x + (b.width - displayWidth) / 2, b.y + b.height - displayHeight, b.texture)
+      const srcW = source.width || b.width;
+      const srcH = source.height || b.height;
+      const fit = Math.min(b.width / srcW, b.height / srcH);
+      const dw = srcW * fit;
+      const dh = srcH * fit;
+
+      scene.add
+        .image(b.x + (b.width - dw) / 2, b.y + b.height - dh, b.texture)
         .setOrigin(0, 0)
-        .setDisplaySize(displayWidth, displayHeight)
+        .setDisplaySize(dw, dh)
         .setDepth(b.y + b.height);
 
-      sprite.setData('buildingId', b.id);
-      sprite.setData('label', b.label);
-
-      // Add solid wall sections on left and right of doorway
       b.collision.forEach((r, idx) => {
         addBox(r.x, r.y, r.width, r.height, `${b.label} wall ${idx + 1}`);
       });
 
-      // Wooden entrance plaque sign
-      const doorY = b.y + b.height - 20;
+      // Building name sign — warm wood colour, pixel-art feel
+      const doorY = b.y + b.height - 16;
       const icon = icons[b.id] ?? '✦ ';
-
       const sign = scene.add
-        .text(b.x + b.width / 2, doorY + 6, `${icon}${b.label}`, {
-          fontFamily: 'monospace',
-          fontSize: '13px',
+        .text(b.x + b.width / 2, doorY + 4, `${icon}${b.label}`, {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '7px',
           color: '#fff0cc',
-          backgroundColor: '#183d32',
-          stroke: '#f2c96d',
-          strokeThickness: 2,
-          padding: { x: 8, y: 4 },
+          backgroundColor: '#4a2e10',
+          stroke: '#c8903a',
+          strokeThickness: 1,
+          padding: { x: 5, y: 3 },
         })
         .setOrigin(0.5, 0)
-        .setDepth(doorY + 15);
+        .setDepth(doorY + 12);
 
       scene.tweens.add({
         targets: sign,
-        alpha: 0.88,
-        duration: 1800,
+        alpha: 0.85,
+        duration: 2200,
         yoyo: true,
         repeat: -1,
+        ease: 'Sine.easeInOut',
       });
     }
 
-    // 9. Props (Fountain, Arch, Lamps, Trees, Fences, Bushes, Flowerbeds)
+    // 11. Props (trees, fences, fountain, lamps, etc.)
     this.buildProps(addBox);
 
-    // 10. Plaza Notice Board
-    const noticeBoardX = 1950;
-    const noticeBoardY = 1560;
-    scene.add.image(noticeBoardX, noticeBoardY, 'village-notice-board').setOrigin(0.5, 0.85).setDepth(noticeBoardY);
-    addBox(noticeBoardX - 18, noticeBoardY - 24, 36, 24, 'notice board');
-
-    // 11. Stone steps at southern entrance
-    scene.add.image(2048, 2780, 'stone-steps').setOrigin(0.5, 0).setDepth(2);
+    // 12. Plaza notice board
+    const nbX = 1024;
+    const nbY = 1060;
+    scene.add
+      .image(nbX, nbY, 'village-notice-board')
+      .setOrigin(0.5, 0.85)
+      .setDepth(nbY);
+    addBox(nbX - 14, nbY - 18, 28, 18, 'notice board');
 
     this.debug(solids);
     return solids;
   }
 
+  // ── Canvas-generated textures (no image file required) ────────────────────
   private createWorldCanvasTextures(): void {
     const { scene } = this;
 
-    // Small utility sprites that do not exist in the supplied art pack.
-    // The terrain, path, water, buildings and environmental props all use image assets.
-    const nb = scene.make.graphics({ x: 0, y: 0 });
-    nb.fillStyle(0x563820).fillRect(6, 18, 5, 20).fillRect(25, 18, 5, 20);
-    nb.fillStyle(0x69402f).fillRect(2, 2, 32, 22);
-    nb.lineStyle(2, 0x3d2516, 1).strokeRect(2, 2, 32, 22);
-    nb.fillStyle(0xf5ebd2).fillRect(6, 5, 24, 16);
-    nb.fillStyle(0x26332c, 0.7).fillRect(9, 8, 18, 2).fillRect(9, 13, 14, 2);
-    nb.fillStyle(0xe85d5d).fillCircle(18, 5, 2);
-    nb.generateTexture('village-notice-board', 36, 42);
-    nb.destroy();
+    // Notice board
+    if (!scene.textures.exists('village-notice-board')) {
+      const nb = scene.make.graphics({ x: 0, y: 0 });
+      nb.fillStyle(0x5c3317).fillRect(5, 16, 4, 18).fillRect(21, 16, 4, 18);
+      nb.fillStyle(0x7a4728).fillRect(2, 2, 26, 18);
+      nb.lineStyle(1, 0x3a2010, 1).strokeRect(2, 2, 26, 18);
+      nb.fillStyle(0xf5ebd2).fillRect(4, 4, 20, 14);
+      nb.fillStyle(0x26332c, 0.7).fillRect(6, 7, 14, 2).fillRect(6, 11, 10, 2);
+      nb.fillStyle(0xe85d5d).fillCircle(14, 4, 1.5);
+      nb.generateTexture('village-notice-board', 30, 36);
+      nb.destroy();
+    }
 
-    const st = scene.make.graphics({ x: 0, y: 0 });
-    st.fillStyle(0x8a9199).fillRect(0, 0, 160, 20);
-    st.fillStyle(0x767d84).fillRect(10, 20, 140, 20);
-    st.fillStyle(0x62686e).fillRect(20, 40, 120, 20);
-    st.fillStyle(0x4e5359).fillRect(30, 60, 100, 20);
-    st.generateTexture('stone-steps', 160, 80);
-    st.destroy();
+    // Stone steps at southern entrance
+    if (!scene.textures.exists('stone-steps')) {
+      const st = scene.make.graphics({ x: 0, y: 0 });
+      st.fillStyle(0x8a9199).fillRect(0, 0, 120, 16);
+      st.fillStyle(0x767d84).fillRect(8, 16, 104, 16);
+      st.fillStyle(0x62686e).fillRect(16, 32, 88, 16);
+      st.generateTexture('stone-steps', 120, 48);
+      st.destroy();
+    }
+
+    // Crop soil plot texture (a single dirt square with furrow lines)
+    if (!scene.textures.exists('crop-soil')) {
+      const cs = scene.make.graphics({ x: 0, y: 0 });
+      cs.fillStyle(0xa07850).fillRect(0, 0, 48, 32);
+      cs.lineStyle(1, 0x7a5c38, 0.9);
+      for (let y = 6; y < 32; y += 8) cs.lineBetween(0, y, 48, y);
+      cs.generateTexture('crop-soil', 48, 32);
+      cs.destroy();
+    }
+
+    // Tiny crop sprout (green tuft)
+    if (!scene.textures.exists('crop-sprout')) {
+      const sp = scene.make.graphics({ x: 0, y: 0 });
+      sp.fillStyle(0x5a9e3a).fillTriangle(8, 16, 16, 0, 24, 16);
+      sp.fillStyle(0x82c84a).fillTriangle(6, 16, 12, 4, 18, 16);
+      sp.generateTexture('crop-sprout', 32, 20);
+      sp.destroy();
+    }
+
+    // Tall crop (wheat-like)
+    if (!scene.textures.exists('crop-wheat')) {
+      const wh = scene.make.graphics({ x: 0, y: 0 });
+      wh.fillStyle(0xd4a832).fillRect(7, 0, 4, 20);
+      wh.fillStyle(0xe8c048).fillTriangle(5, 5, 11, 0, 17, 5);
+      wh.fillStyle(0xc89820).fillRect(6, 14, 6, 6);
+      wh.generateTexture('crop-wheat', 24, 26);
+      wh.destroy();
+    }
   }
 
+  // ── Terrain frame registration ─────────────────────────────────────────────
   private registerTerrainFrames(): void {
     const atlas = this.scene.textures.get('terrain-atlas');
+    // Verified coordinates from terrain-tiles.json audit
     const frames = [
-      ['terrain-grass', 0, 0, 72, 77],
+      // Grass variants (band 0, y=0..77)
+      ['terrain-grass',   0,   0, 72, 77],
       ['terrain-grass-2', 237, 0, 70, 77],
       ['terrain-grass-3', 474, 0, 71, 77],
-      ['terrain-dirt', 238, 81, 69, 73],
-      ['terrain-cobble', 3, 158, 65, 69],
-      ['terrain-water', 0, 309, 67, 68],
-      ['terrain-water-2', 85, 309, 62, 69],
-      ['terrain-water-edge', 0, 385, 73, 74],
+      ['terrain-grass-4', 80,  0, 72, 77],
+      // Dirt path (band 1, y=81..153)
+      ['terrain-dirt',    238, 81, 69, 73],
+      ['terrain-dirt-2',  0,   81, 70, 73],
+      // Cobblestone (band 2, y=158..226)
+      ['terrain-cobble',  3,   158, 65, 69],
+      // Water (band 4, y=309..377)
+      ['terrain-water',   0,   309, 67, 68],
+      ['terrain-water-2', 85,  309, 62, 69],
+      // Water edges (band 5, y=385..458)
+      ['terrain-water-edge',  0,   385, 73, 74],
       ['terrain-water-edge-2', 245, 385, 62, 74],
+      // Vegetation detail (band 9, y=699..758)
       ['terrain-vegetation', 242, 699, 57, 60],
     ] as const;
+
     for (const [key, x, y, width, height] of frames) {
       if (!atlas.has(key)) atlas.add(key, 0, x, y, width, height);
     }
   }
 
+  // ── Grass ground covering ──────────────────────────────────────────────────
   private buildTerrainGround(): void {
     const { scene } = this;
-    // One repeating, real grass tile keeps draw calls low on the 4096x3072 world.
-    scene.add.tileSprite(0, 0, VILLAGE.width, VILLAGE.height, 'terrain-atlas', 'terrain-grass')
+
+    // Base grass tile covering the entire map — no gaps, no navy showing through
+    scene.add
+      .tileSprite(0, 0, VILLAGE.width, VILLAGE.height, 'terrain-atlas', 'terrain-grass')
       .setOrigin(0, 0)
       .setDepth(-20);
 
-    // Lightly vary the grass using other supplied grass/vegetation frames so the
-    // world does not look like a flat procedural colour field.
-    let seed = 37;
+    // Secondary grass tile for texture variation — tiled across the world
+    scene.add
+      .tileSprite(0, 0, VILLAGE.width, VILLAGE.height, 'terrain-atlas', 'terrain-grass-2')
+      .setOrigin(0, 0)
+      .setAlpha(0.25)
+      .setDepth(-19);
+
+    // Scattered grass clumps and vegetation details for visual richness
+    let seed = 19;
     const rand = (): number => {
       seed = (seed * 9301 + 49297) % 233280;
       return seed / 233280;
     };
-    for (let i = 0; i < 220; i += 1) {
-      const x = 170 + rand() * (VILLAGE.width - 340);
-      const y = 170 + rand() * (VILLAGE.height - 340);
-      const key = rand() > 0.55 ? 'terrain-grass-2' : 'terrain-grass-3';
-      scene.add.image(x, y, 'terrain-atlas', key)
+
+    for (let i = 0; i < 160; i++) {
+      const x = 120 + rand() * (VILLAGE.width - 240);
+      const y = 120 + rand() * (VILLAGE.height - 240);
+      const variant = rand();
+      const key = variant > 0.66 ? 'terrain-grass-3' : variant > 0.33 ? 'terrain-grass-4' : 'terrain-vegetation';
+      scene.add
+        .image(x, y, 'terrain-atlas', key)
         .setOrigin(0.5, 0.5)
-        .setDisplaySize(48, 52)
-        .setAlpha(0.35 + rand() * 0.3)
-        .setDepth(-19);
+        .setDisplaySize(42, 42)
+        .setAlpha(0.28 + rand() * 0.25)
+        .setDepth(-18);
     }
   }
 
+  // ── Crop plots — cozy farming atmosphere ──────────────────────────────────
+  private buildCropPlots(): void {
+    const { scene } = this;
+    const depth = 3;
+
+    // Farm plot 1 — north-east area (rows of soil + crop sprouts)
+    const plot1 = { x: 1090, y: 1160, cols: 4, rows: 3, cellW: 52, cellH: 36 };
+    for (let row = 0; row < plot1.rows; row++) {
+      for (let col = 0; col < plot1.cols; col++) {
+        const px = plot1.x + col * plot1.cellW;
+        const py = plot1.y + row * plot1.cellH;
+        scene.add.image(px, py, 'crop-soil').setOrigin(0, 0).setDisplaySize(48, 32).setDepth(depth);
+        // Place a sprout or wheat in each cell
+        const cropKey = (row + col) % 3 === 0 ? 'crop-wheat' : 'crop-sprout';
+        scene.add
+          .image(px + 24, py + 6, cropKey)
+          .setOrigin(0.5, 1)
+          .setDepth(depth + 1);
+      }
+    }
+
+    // Farm plot 2 — west side near pond (smaller)
+    const plot2 = { x: 540, y: 1060, cols: 3, rows: 2, cellW: 52, cellH: 36 };
+    for (let row = 0; row < plot2.rows; row++) {
+      for (let col = 0; col < plot2.cols; col++) {
+        const px = plot2.x + col * plot2.cellW;
+        const py = plot2.y + row * plot2.cellH;
+        scene.add.image(px, py, 'crop-soil').setOrigin(0, 0).setDisplaySize(48, 32).setDepth(depth);
+        if ((row + col) % 2 === 0) {
+          scene.add
+            .image(px + 24, py + 6, 'crop-sprout')
+            .setOrigin(0.5, 1)
+            .setDepth(depth + 1);
+        }
+      }
+    }
+
+    // Farm plot 3 — small herb garden near about-me cottage
+    const plot3 = { x: 190, y: 870, cols: 3, rows: 2, cellW: 48, cellH: 32 };
+    for (let row = 0; row < plot3.rows; row++) {
+      for (let col = 0; col < plot3.cols; col++) {
+        const px = plot3.x + col * plot3.cellW;
+        const py = plot3.y + row * plot3.cellH;
+        scene.add.image(px, py, 'crop-soil').setOrigin(0, 0).setDisplaySize(44, 28).setDepth(depth);
+        scene.add
+          .image(px + 22, py + 4, 'crop-sprout')
+          .setOrigin(0.5, 1)
+          .setDisplaySize(20, 14)
+          .setDepth(depth + 1);
+      }
+    }
+  }
+
+  // ── Water bodies ──────────────────────────────────────────────────────────
   private buildWaterBodies(): void {
     const { scene } = this;
-    const tile = (x: number, y: number, frame: string, size = 70, depth = 0): void => {
-      scene.add.image(x, y, 'terrain-atlas', frame)
+    const tile = (x: number, y: number, frame: string, size = 56, depth = 0): void => {
+      scene.add
+        .image(x, y, 'terrain-atlas', frame)
         .setDisplaySize(size, size)
         .setOrigin(0.5, 0.5)
         .setDepth(depth);
     };
 
-    // Southwest pond assembled from the supplied water and water-edge tiles.
-    for (let y = 2070; y <= 2500; y += 58) {
-      for (let x = 660; x <= 1300; x += 58) {
-        const nx = (x - 980) / 330;
-        const ny = (y - 2290) / 220;
-        const distance = nx * nx + ny * ny;
-        if (distance <= 1.08) {
-          const frame = ((Math.floor(x / 58) + Math.floor(y / 58)) % 3 === 0)
-            ? 'terrain-water-2' : 'terrain-water';
-          tile(x, y, frame, 46, 1);
-        } else if (distance <= 1.35 && (Math.floor(x / 58) + Math.floor(y / 58)) % 2 === 0) {
-          tile(x, y, 'terrain-water-edge', 48, 1.5);
+    // Tranquil pond — southwest of village
+    // Oval pond shape using ellipse-distance test
+    const pondCX = 440, pondCY = 1120, pondRX = 160, pondRY = 110;
+    for (let y = pondCY - pondRY - 30; y <= pondCY + pondRY + 30; y += 44) {
+      for (let x = pondCX - pondRX - 30; x <= pondCX + pondRX + 30; x += 44) {
+        const nx = (x - pondCX) / pondRX;
+        const ny = (y - pondCY) / pondRY;
+        const d = nx * nx + ny * ny;
+        if (d <= 1.0) {
+          const frame = ((Math.floor(x / 44) + Math.floor(y / 44)) % 3 === 0) ? 'terrain-water-2' : 'terrain-water';
+          tile(x, y, frame, 40, 1);
+        } else if (d <= 1.35 && (Math.floor(x / 44) + Math.floor(y / 44)) % 2 === 0) {
+          tile(x, y, 'terrain-water-edge', 42, 1.5);
         }
       }
     }
 
-    // Eastern river follows a soft meander, using image tiles rather than vector fills.
-    for (let y = 10; y < VILLAGE.height; y += 58) {
-      const centerX = 3420 + Math.sin(y / 390) * 85 + Math.sin(y / 170) * 22;
-      for (let x = centerX - 145; x <= centerX + 145; x += 58) {
-        const edge = Math.abs(x - centerX) > 108;
-        const frame = edge
-          ? (((Math.floor(y / 58) + Math.floor(x / 58)) % 2 === 0) ? 'terrain-water-edge' : 'terrain-water-edge-2')
-          : (((Math.floor(y / 58) + Math.floor(x / 58)) % 3 === 0) ? 'terrain-water-2' : 'terrain-water');
-        tile(x, y, frame, 46, edge ? 1.5 : 1);
+    // Eastern stream / river alongside the east edge
+    for (let y = 0; y < VILLAGE.height; y += 44) {
+      const centerX = 1900 + Math.sin(y / 280) * 30;
+      for (let x = centerX - 64; x <= centerX + 64; x += 44) {
+        const isEdge = Math.abs(x - centerX) > 42;
+        const frame = isEdge
+          ? (((Math.floor(y / 44) + Math.floor(x / 44)) % 2 === 0) ? 'terrain-water-edge' : 'terrain-water-edge-2')
+          : (((Math.floor(y / 44) + Math.floor(x / 44)) % 3 === 0) ? 'terrain-water-2' : 'terrain-water');
+        tile(x, y, frame, 40, isEdge ? 1.5 : 1);
       }
-    }
-
-    // Waterfall accents made from the same terrain-water artwork.
-    for (let i = 0; i < 4; i += 1) {
-      tile(3480 + i * 14, 58 + i * 34, i % 2 ? 'terrain-water-edge' : 'terrain-water', 46, 3);
-    }
-    for (let i = 0; i < 3; i += 1) {
-      tile(535 + i * 18, 2250 + i * 26, i % 2 ? 'terrain-water-edge' : 'terrain-water', 44, 3);
     }
   }
 
+  // ── Path network and plaza ─────────────────────────────────────────────────
   private buildPathsAndPlaza(): void {
     const { scene } = this;
-    const stamp = (x: number, y: number, frame: string, size = 68, depth = 4, angle = 0): void => {
-      scene.add.image(x, y, 'terrain-atlas', frame)
+
+    const stamp = (x: number, y: number, frame: string, size = 54, depth = 4, angle = 0): void => {
+      scene.add
+        .image(x, y, 'terrain-atlas', frame)
         .setDisplaySize(size, size)
         .setRotation(angle)
         .setOrigin(0.5, 0.5)
         .setDepth(depth);
     };
 
-    // Place real dirt tiles along every route so the paths are part of the art,
-    // not vector strokes. The short step distance makes routes visually connected.
+    // Dirt tile paths along every route
     for (const route of VILLAGE.paths) {
-      for (let i = 0; i < route.length - 1; i += 1) {
-        const a = route[i];
-        const b = route[i + 1];
+      for (let i = 0; i < route.length - 1; i++) {
+        const a = route[i]!;
+        const b = route[i + 1]!;
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const distance = Math.hypot(dx, dy);
-        const steps = Math.max(1, Math.ceil(distance / 30));
-        const angle = Math.atan2(dy, dx) * 0.08;
-        for (let step = 0; step <= steps; step += 1) {
+        const steps = Math.max(1, Math.ceil(distance / 28));
+        const angle = Math.atan2(dy, dx) * 0.06;
+        for (let step = 0; step <= steps; step++) {
           const t = step / steps;
-          stamp(a.x + dx * t, a.y + dy * t, 'terrain-dirt', 48, 4, angle);
+          // Alternate between dirt variants for natural variation
+          const frame = (step % 3 === 0) ? 'terrain-dirt-2' : 'terrain-dirt';
+          stamp(a.x + dx * t, a.y + dy * t, frame, 44, 4, angle);
         }
       }
     }
 
-    // Central village plaza made from the provided cobblestone tile.
-    for (let y = 1310; y <= 1570; y += 42) {
-      for (let x = 1880; x <= 2216; x += 42) {
-        const dx = (x - 2048) / 178;
-        const dy = (y - 1440) / 140;
-        if (dx * dx + dy * dy <= 1.12) stamp(x, y, 'terrain-cobble', 42, 5);
+    // Cobblestone plaza around the central fountain
+    for (let y = 720; y <= 900; y += 36) {
+      for (let x = 880; x <= 1168; x += 36) {
+        const dx = (x - 1024) / 154;
+        const dy = (y - 810) / 100;
+        if (dx * dx + dy * dy <= 1.15) stamp(x, y, 'terrain-cobble', 36, 5);
       }
     }
 
-    // Cobblestone arrival pad at the southern entrance.
-    for (let y = 2710; y <= 2790; y += 36) {
-      for (let x = 1950; x <= 2146; x += 36) stamp(x, y, 'terrain-cobble', 38, 5);
+    // Cobblestone arrival pad at south entrance
+    for (let y = 1400; y <= 1460; y += 30) {
+      for (let x = 970; x <= 1078; x += 30) stamp(x, y, 'terrain-cobble', 32, 5);
     }
   }
 
+  // ── Bridges ───────────────────────────────────────────────────────────────
   private buildBridgesAndDocks(): void {
     const { scene } = this;
-
-    // Bridges crossing the river
     for (const b of VILLAGE.bridges) {
-      const bridgeTexture = b.orientation === 'horizontal' ? 'bridge-horizontal' : 'bridge-vertical';
+      const texKey = b.orientation === 'horizontal' ? 'bridge-horizontal' : 'bridge-vertical';
       scene.add
-        .image(b.x, b.y, bridgeTexture)
+        .image(b.x, b.y, texKey)
         .setOrigin(0.5, 0.5)
         .setDisplaySize(b.width, b.height)
         .setDepth(b.y + b.height / 2);
     }
   }
 
-  private buildWorldBoundaries(addBox: (x: number, y: number, w: number, h: number, label: string) => void): void {
-    // Top border
-    addBox(0, 0, VILLAGE.width, 140, 'north boundary cliff');
-    // Left border
-    addBox(0, 0, 140, VILLAGE.height, 'west boundary cliff');
-    // Right border
-    addBox(VILLAGE.width - 140, 0, 140, VILLAGE.height, 'east boundary cliff');
-    // Bottom border with opening at spawn entrance (x: 1960 to 2136)
-    addBox(0, VILLAGE.height - 120, 1940, 120, 'south boundary left');
-    addBox(2156, VILLAGE.height - 120, VILLAGE.width - 2156, 120, 'south boundary right');
+  // ── World boundary walls ───────────────────────────────────────────────────
+  private buildWorldBoundaries(
+    addBox: (x: number, y: number, w: number, h: number, label: string) => void,
+  ): void {
+    const W = VILLAGE.width;
+    const H = VILLAGE.height;
+    const T = 100; // border thickness
+    addBox(0, 0, W, T, 'north boundary');
+    addBox(0, 0, T, H, 'west boundary');
+    addBox(W - T, 0, T, H, 'east boundary');
+    // South boundary with opening for spawn entrance
+    addBox(0, H - T, 940, T, 'south boundary left');
+    addBox(1108, H - T, W - 1108, T, 'south boundary right');
   }
 
-  private buildWaterCollisions(addBox: (x: number, y: number, w: number, h: number, label: string) => void): void {
-    // Southwest pond water collision (dock at x: 1000, y: 2220 is walkable)
-    addBox(640, 2120, 320, 360, 'pond water west');
-    addBox(1050, 2120, 240, 360, 'pond water east');
-    addBox(960, 2280, 90, 200, 'pond water south of dock');
+  // ── Water collision blocks ────────────────────────────────────────────────
+  private buildWaterCollisions(
+    addBox: (x: number, y: number, w: number, h: number, label: string) => void,
+  ): void {
+    // Pond collision (dock gap at 450, y 1100-1160)
+    addBox(280, 1020, 170, 220, 'pond west');
+    addBox(500, 1020, 130, 220, 'pond east');
+    addBox(410, 1200, 80, 60, 'pond south');
 
-    // Eastern river water collision blocks between the 3 bridges
-    // Section 1: Above NE bridge (y: 0 to 460)
-    addBox(3340, 140, 220, 320, 'river water north');
-    // Section 2: Between NE bridge and East bridge (y: 540 to 1340)
-    addBox(3280, 540, 240, 800, 'river water upper');
-    // Section 3: Between East bridge and SE bridge (y: 1420 to 2370)
-    addBox(3240, 1420, 230, 950, 'river water middle');
-    // Section 4: Below SE bridge (y: 2530 to 2950)
-    addBox(3220, 2530, 230, 420, 'river water south');
+    // Eastern stream (bridge gaps at y 820-880 and y 1150-1210)
+    addBox(1840, 100, 100, 700, 'stream north');
+    addBox(1840, 900, 100, 220, 'stream mid');
+    addBox(1840, 1230, 100, 280, 'stream south');
   }
 
-  private buildProps(addBox: (x: number, y: number, w: number, h: number, label: string) => void): void {
+  // ── Props ─────────────────────────────────────────────────────────────────
+  private buildProps(
+    addBox: (x: number, y: number, w: number, h: number, label: string) => void,
+  ): void {
     const { scene } = this;
 
     for (const p of VILLAGE.props) {
-      if (p.texture === 'prop-fountain') {
-        const f = scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.65).setDepth(p.y);
-        // Fountain gentle water pulsing effect
-        scene.tweens.add({
-          targets: f,
-          scaleX: 1.02,
-          scaleY: 1.02,
-          duration: 1200,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        });
-        if (p.collision) {
-          addBox(p.x - p.collision.width / 2, p.y - p.collision.height / 2, p.collision.width, p.collision.height, 'fountain');
+      switch (p.texture) {
+        case 'prop-fountain': {
+          const f = scene.add
+            .image(p.x, p.y, p.texture)
+            .setOrigin(0.5, 0.65)
+            .setDepth(p.y);
+          scene.tweens.add({
+            targets: f, scaleX: 1.02, scaleY: 1.02,
+            duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+          });
+          if (p.collision) {
+            addBox(p.x - p.collision.width / 2, p.y - p.collision.height / 2, p.collision.width, p.collision.height, 'fountain');
+          }
+          break;
         }
-      } else if (p.texture === 'prop-arch') {
-        scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.85).setDepth(p.y);
-        // Posts on left and right leave center walkable
-        addBox(p.x - 56, p.y - 20, 24, 24, 'entrance arch left post');
-        addBox(p.x + 32, p.y - 20, 24, 24, 'entrance arch right post');
-      } else if (p.texture === 'prop-dock') {
-        scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.5).setDepth(p.y);
-      } else if (p.texture === 'prop-boat') {
-        scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.5).setDepth(p.y);
-        if (p.collision) {
-          addBox(p.x - p.collision.width / 2, p.y - p.collision.height / 2, p.collision.width, p.collision.height, 'rowboat');
+        case 'prop-arch': {
+          scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.85).setDepth(p.y);
+          addBox(p.x - 48, p.y - 20, 20, 20, 'arch left post');
+          addBox(p.x + 28, p.y - 20, 20, 20, 'arch right post');
+          break;
         }
-      } else if (p.texture === 'prop-lamp') {
-        scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.85).setDepth(p.y);
-        // Warm radial lantern glow
-        const glow = scene.add.graphics().setDepth(p.y - 5);
-        glow.fillStyle(0xffe699, 0.16);
-        glow.fillCircle(p.x, p.y - 36, 42);
-        glow.fillStyle(0xfff5cc, 0.28);
-        glow.fillCircle(p.x, p.y - 36, 22);
-
-        scene.tweens.add({
-          targets: glow,
-          alpha: 0.75,
-          duration: 900 + Math.random() * 400,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        });
-
-        if (p.collision) {
-          addBox(p.x - p.collision.width / 2, p.y - p.collision.height, p.collision.width, p.collision.height, 'streetlamp post');
+        case 'prop-dock': {
+          scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.5).setDepth(p.y);
+          break;
         }
-      } else if (p.texture === 'prop-bench') {
-        scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.85).setDepth(p.y);
-        if (p.collision) {
-          addBox(p.x - p.collision.width / 2, p.y - p.collision.height, p.collision.width, p.collision.height, 'bench');
+        case 'prop-boat': {
+          scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.5).setDepth(p.y);
+          if (p.collision) {
+            addBox(p.x - p.collision.width / 2, p.y - p.collision.height / 2, p.collision.width, p.collision.height, 'rowboat');
+          }
+          break;
         }
-      } else if (p.texture === 'prop-fence-h') {
-        scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.85).setDepth(p.y);
-        if (p.collision) {
-          addBox(p.x - p.collision.width / 2, p.y - p.collision.height, p.collision.width, p.collision.height, 'fence');
+        case 'prop-lamp': {
+          scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.85).setDepth(p.y);
+          // Warm lantern glow
+          const glow = scene.add.graphics().setDepth(p.y - 5);
+          glow.fillStyle(0xffe699, 0.14);
+          glow.fillCircle(p.x, p.y - 28, 34);
+          glow.fillStyle(0xfff5cc, 0.24);
+          glow.fillCircle(p.x, p.y - 28, 16);
+          scene.tweens.add({
+            targets: glow, alpha: 0.65,
+            duration: 800 + Math.random() * 500,
+            yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+          });
+          if (p.collision) {
+            addBox(p.x - p.collision.width / 2, p.y - p.collision.height, p.collision.width, p.collision.height, 'lamp post');
+          }
+          break;
         }
-      } else if (p.texture === 'prop-tree-oak' || p.texture === 'prop-tree-pine') {
-        scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.88).setDepth(p.y);
-        if (p.collision) {
-          addBox(p.x - p.collision.width / 2, p.y - p.collision.height, p.collision.width, p.collision.height, 'tree trunk');
+        case 'prop-bench': {
+          scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.85).setDepth(p.y);
+          if (p.collision) {
+            addBox(p.x - p.collision.width / 2, p.y - p.collision.height, p.collision.width, p.collision.height, 'bench');
+          }
+          break;
         }
-      } else if (p.texture === 'prop-bush') {
-        scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.85).setDepth(p.y);
-        if (p.collision) {
-          addBox(p.x - p.collision.width / 2, p.y - p.collision.height, p.collision.width, p.collision.height, 'bush');
+        case 'prop-fence-h': {
+          scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.85).setDepth(p.y);
+          if (p.collision) {
+            addBox(p.x - p.collision.width / 2, p.y - p.collision.height, p.collision.width, p.collision.height, 'fence');
+          }
+          break;
         }
-      } else if (p.texture === 'prop-flowerbed') {
-        scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.5).setDepth(3);
+        case 'prop-tree-oak':
+        case 'prop-tree-pine': {
+          scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.88).setDepth(p.y);
+          if (p.collision) {
+            addBox(p.x - p.collision.width / 2, p.y - p.collision.height, p.collision.width, p.collision.height, 'tree trunk');
+          }
+          break;
+        }
+        case 'prop-bush': {
+          scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.85).setDepth(p.y);
+          if (p.collision) {
+            addBox(p.x - p.collision.width / 2, p.y - p.collision.height, p.collision.width, p.collision.height, 'bush');
+          }
+          break;
+        }
+        case 'prop-flowerbed': {
+          scene.add.image(p.x, p.y, p.texture).setOrigin(0.5, 0.5).setDepth(3);
+          break;
+        }
+        default:
+          break;
       }
     }
   }
 
+  // ── Debug overlay ──────────────────────────────────────────────────────────
   private debug(solids: Phaser.Physics.Arcade.StaticGroup): void {
     if (!new URLSearchParams(window.location.search).has('debug')) return;
     const g = this.scene.add.graphics().setDepth(3000).setScrollFactor(1);
@@ -417,46 +546,46 @@ export class WorldBuilder {
       const r = (o as Phaser.GameObjects.Rectangle).getBounds();
       g.strokeRect(r.x, r.y, r.width, r.height);
     });
-    g.fillStyle(0x83d17b, 1).fillCircle(VILLAGE.spawn.x, VILLAGE.spawn.y, 12);
+    g.fillStyle(0x83d17b, 1).fillCircle(VILLAGE.spawn.x, VILLAGE.spawn.y, 10);
   }
 }
 
 export function preloadVillageAssets(scene: Phaser.Scene): void {
   const base = import.meta.env.BASE_URL;
 
-  // 1. All 8 Buildings
-  scene.load.image('building-about-me', `${base}assets/processed/buildings/individual/building-about-me.png`);
-  scene.load.image('building-projects', `${base}assets/processed/buildings/individual/building-projects.png`);
-  scene.load.image('building-skills', `${base}assets/processed/buildings/individual/building-skills.png`);
+  // Portfolio buildings
+  scene.load.image('building-about-me',   `${base}assets/processed/buildings/individual/building-about-me.png`);
+  scene.load.image('building-projects',   `${base}assets/processed/buildings/individual/building-projects.png`);
+  scene.load.image('building-skills',     `${base}assets/processed/buildings/individual/building-skills.png`);
   scene.load.image('building-guild-hall', `${base}assets/processed/buildings/individual/building-guild-hall.png`);
-  scene.load.image('building-services', `${base}assets/processed/buildings/individual/building-services.png`);
-  scene.load.image('building-contact', `${base}assets/processed/buildings/individual/building-contact.png`);
-  scene.load.image('building-house-1', `${base}assets/processed/buildings/individual/building-house-1.png`);
-  scene.load.image('building-house-2', `${base}assets/processed/buildings/individual/building-house-2.png`);
+  scene.load.image('building-services',   `${base}assets/processed/buildings/individual/building-services.png`);
+  scene.load.image('building-contact',    `${base}assets/processed/buildings/individual/building-contact.png`);
+  scene.load.image('building-house-1',    `${base}assets/processed/buildings/individual/building-house-1.png`);
+  scene.load.image('building-house-2',    `${base}assets/processed/buildings/individual/building-house-2.png`);
 
-  // Legacy buildings for backward compatibility
+  // Legacy buildings for backward-compat
   scene.load.image('building-cottage', `${base}assets/processed/buildings/individual/building-1-cottage-green.png`);
-  scene.load.image('building-forge', `${base}assets/processed/buildings/individual/building-2-forge-red.png`);
-  scene.load.image('building-hall', `${base}assets/processed/buildings/individual/building-3-hall-blue.png`);
-  scene.load.image('building-house', `${base}assets/processed/buildings/individual/building-4-house-orange.png`);
+  scene.load.image('building-forge',   `${base}assets/processed/buildings/individual/building-2-forge-red.png`);
+  scene.load.image('building-hall',    `${base}assets/processed/buildings/individual/building-3-hall-blue.png`);
+  scene.load.image('building-house',   `${base}assets/processed/buildings/individual/building-4-house-orange.png`);
 
-  // 2. Village Props & Environmental Landmarks
-  scene.load.image('prop-fountain', `${base}assets/processed/props/fountain.png`);
-  scene.load.image('prop-arch', `${base}assets/processed/props/entrance-arch.png`);
-  scene.load.image('prop-dock', `${base}assets/processed/props/fishing-dock.png`);
-  scene.load.image('prop-boat', `${base}assets/processed/props/rowboat.png`);
+  // Props & environment
+  scene.load.image('prop-fountain',  `${base}assets/processed/props/fountain.png`);
+  scene.load.image('prop-arch',      `${base}assets/processed/props/entrance-arch.png`);
+  scene.load.image('prop-dock',      `${base}assets/processed/props/fishing-dock.png`);
+  scene.load.image('prop-boat',      `${base}assets/processed/props/rowboat.png`);
   scene.load.image('bridge-horizontal', `${base}assets/processed/props/bridge-horizontal.png`);
-  scene.load.image('bridge-vertical', `${base}assets/processed/props/bridge-vertical.png`);
-  scene.load.image('prop-lamp', `${base}assets/processed/props/streetlamp.png`);
-  scene.load.image('prop-bench', `${base}assets/processed/props/bench.png`);
-  scene.load.image('prop-tree-oak', `${base}assets/processed/props/tree-oak.png`);
+  scene.load.image('bridge-vertical',   `${base}assets/processed/props/bridge-vertical.png`);
+  scene.load.image('prop-lamp',      `${base}assets/processed/props/streetlamp.png`);
+  scene.load.image('prop-bench',     `${base}assets/processed/props/bench.png`);
+  scene.load.image('prop-tree-oak',  `${base}assets/processed/props/tree-oak.png`);
   scene.load.image('prop-tree-pine', `${base}assets/processed/props/tree-pine.png`);
-  scene.load.image('prop-bush', `${base}assets/processed/props/bush.png`);
-  scene.load.image('prop-fence-h', `${base}assets/processed/props/fence-h.png`);
-  scene.load.image('prop-fence-v', `${base}assets/processed/props/fence-v.png`);
+  scene.load.image('prop-bush',      `${base}assets/processed/props/bush.png`);
+  scene.load.image('prop-fence-h',   `${base}assets/processed/props/fence-h.png`);
+  scene.load.image('prop-fence-v',   `${base}assets/processed/props/fence-v.png`);
   scene.load.image('prop-flowerbed', `${base}assets/processed/props/flowerbed.png`);
 
-  // 3. Terrain & Player Atlas
+  // Terrain atlas + player sprite sheet
   scene.load.image('terrain-atlas', `${base}assets/processed/terrain/terrain-tileset-clean-partial.png`);
   scene.load.spritesheet('player-atlas', `${base}assets/processed/player/player-atlas-normalized.png`, {
     frameWidth: 144,

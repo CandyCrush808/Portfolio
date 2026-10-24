@@ -33,16 +33,16 @@ interface ZoneDef {
 }
 
 const WORLD_ZONES: ZoneDef[] = [
-  { id: 'spawn', label: 'SOUTHERN ENTRANCE', x: 2048, y: 2650, radius: 240 },
-  { id: 'plaza', label: 'MAIN PLAZA & FOUNTAIN', x: 2048, y: 1440, radius: 260 },
-  { id: 'projects', label: 'PROJECTS WORKSHOP', x: 2048, y: 840, radius: 220 },
-  { id: 'skills', label: 'SKILLS LIBRARY', x: 1368, y: 850, radius: 220 },
-  { id: 'about', label: 'ABOUT COTTAGE', x: 1068, y: 1480, radius: 220 },
-  { id: 'experience', label: 'EXPERIENCE GUILD HALL', x: 2848, y: 820, radius: 240 },
-  { id: 'services', label: 'SERVICES MARKET', x: 2648, y: 1480, radius: 220 },
-  { id: 'contact', label: 'CONTACT INN', x: 2808, y: 2150, radius: 240 },
-  { id: 'pond', label: 'TRANQUIL POND & DOCK', x: 1000, y: 2220, radius: 280 },
-  { id: 'river', label: 'EASTERN RIVER & BRIDGES', x: 3340, y: 1380, radius: 280 },
+  { id: 'spawn',      label: 'SOUTHERN ENTRANCE',           x: 1024, y: 1380, radius: 180 },
+  { id: 'plaza',      label: 'MAIN PLAZA & FOUNTAIN',        x: 1024, y: 800,  radius: 180 },
+  { id: 'projects',   label: 'PROJECTS WORKSHOP',            x: 1024, y: 380,  radius: 160 },
+  { id: 'skills',     label: 'SKILLS LIBRARY',               x: 358,  y: 460,  radius: 160 },
+  { id: 'about',      label: 'ABOUT COTTAGE',                x: 290,  y: 820,  radius: 160 },
+  { id: 'experience', label: 'EXPERIENCE GUILD HALL',         x: 1722, y: 480,  radius: 160 },
+  { id: 'services',   label: 'SERVICES MARKET',              x: 1782, y: 820,  radius: 160 },
+  { id: 'contact',    label: 'CONTACT INN',                  x: 1662, y: 1150, radius: 160 },
+  { id: 'pond',       label: 'TRANQUIL POND & DOCK',         x: 440,  y: 1120, radius: 200 },
+  { id: 'river',      label: 'EASTERN STREAM & BRIDGES',     x: 1900, y: 820,  radius: 180 },
 ];
 
 /**
@@ -78,13 +78,13 @@ export class WorldScene extends Phaser.Scene {
     // 3. Create Village NPCs
     this.npcs = [
       // Rowan the Guide in Main Plaza
-      new NPC(this, 2000, 1500, 'guide', 'Rowan the Guide', GUIDE_DIALOGUE, 0xf7d88c, 'talk-guide'),
+      new NPC(this, 970, 840, 'guide', 'Rowan the Guide', GUIDE_DIALOGUE, 0xf7d88c, 'talk-guide'),
       // Elena the Guildmaster at Experience Guild Hall
-      new NPC(this, 2800, 890, 'elena', 'Guildmaster Elena', ELENA_DIALOGUE, 0xe87a7a, 'visit-experience'),
+      new NPC(this, 1700, 510, 'elena', 'Guildmaster Elena', ELENA_DIALOGUE, 0xe87a7a, 'visit-experience'),
       // Silas the Merchant at Services Market
-      new NPC(this, 2600, 1560, 'silas', 'Merchant Silas', SILAS_DIALOGUE, 0x82c4f5, 'visit-services'),
+      new NPC(this, 1750, 840, 'silas', 'Merchant Silas', SILAS_DIALOGUE, 0x82c4f5, 'visit-services'),
       // Finn the Barkeep at Contact Inn
-      new NPC(this, 2760, 2240, 'finn', 'Barkeep Finn', FINN_DIALOGUE, 0xf0ab65, 'visit-contact'),
+      new NPC(this, 1630, 1170, 'finn', 'Barkeep Finn', FINN_DIALOGUE, 0xf0ab65, 'visit-contact'),
     ];
 
     for (const npc of this.npcs) {
@@ -99,15 +99,16 @@ export class WorldScene extends Phaser.Scene {
     camera.setBounds(0, 0, VILLAGE.width, VILLAGE.height);
 
     const getWorldZoom = (): number => {
-      // Keep the village readable as a whole instead of framing only the player.
-      if (window.innerWidth <= 600) return 0.34;
-      if (window.innerWidth <= 900) return 0.38;
-      return 0.42;
+      // Cozy close-up: show roughly 700-900px of the 2048px world width at a time
+      if (window.innerWidth <= 480)  return 0.75;
+      if (window.innerWidth <= 768)  return 0.85;
+      if (window.innerWidth <= 1200) return 0.95;
+      return 1.05;
     };
 
     camera.setZoom(getWorldZoom());
-    // Smooth camera follow with slight vertical offset for centered player framing
-    camera.startFollow(this.player, true, 0.12, 0.12, 0, 16);
+    // Smooth camera follow
+    camera.startFollow(this.player, true, 0.10, 0.10, 0, 12);
     camera.roundPixels = true;
 
     const updateWorldZoom = (): void => {

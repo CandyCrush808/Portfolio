@@ -13,8 +13,6 @@ import {
   type QuestObjective,
   EXPERIENCE_DATA,
   SERVICES_DATA,
-  type ExperienceItem,
-  type ServiceItem,
 } from '../data/portfolioData';
 import { soundEffects } from '../audio/SoundEffects';
 import { VILLAGE } from '../world/maps/villageMap';
@@ -1426,6 +1424,99 @@ export class UIShell {
 
     body.append(resumeBtn, fastTravelBox, soundToggle, helpBtn, spawnBtn, titleBtn);
     card.append(header, body);
+    this.modalContainer.replaceChildren(card);
+  }
+
+  // E2. Experience Modal
+  private renderExperienceModal(): void {
+    const card = el('div', 'pq-modal-card pq-modal-wide');
+
+    const header = el('div', 'pq-modal-header');
+    const titleBox = el('div');
+    titleBox.append(
+      el('span', 'pq-modal-kicker', '🛡 GUILD RECORDS 🛡'),
+      el('h2', 'pq-modal-title', 'Experience Guild Hall'),
+    );
+    const closeBtn = el('button', 'pq-modal-close', '✕');
+    closeBtn.type = 'button';
+    closeBtn.addEventListener('click', () => this.closeModal());
+    header.append(titleBox, closeBtn);
+
+    const body = el('div', 'pq-detail-body');
+
+    EXPERIENCE_DATA.forEach((item) => {
+      const section = el('section', 'pq-detail-section');
+      const titleRow = el('div', 'pq-exp-title-row');
+      titleRow.append(
+        el('h3', 'pq-exp-role', item.role),
+        el('span', 'pq-exp-period', item.period),
+      );
+      const orgLine = el('div', 'pq-exp-org');
+      orgLine.append(
+        el('span', 'pq-exp-org-name', item.organization),
+        el('span', 'pq-exp-loc', ` — ${item.location}`),
+        el('span', 'pq-exp-type', item.type),
+      );
+      section.append(titleRow, orgLine);
+      section.append(el('p', 'pq-exp-desc', item.description));
+      if (item.highlights.length > 0) {
+        const hl = el('ul', 'pq-detail-list');
+        item.highlights.forEach((h) => hl.append(el('li', undefined, h)));
+        section.append(hl);
+      }
+      if (item.badges.length > 0) {
+        const badgeRow = el('div', 'pq-tech-pills');
+        item.badges.forEach((b) => badgeRow.append(el('span', 'pq-tech-pill', b)));
+        section.append(badgeRow);
+      }
+      body.append(section);
+    });
+
+    card.append(header, body);
+    this.modalContainer.replaceChildren(card);
+  }
+
+  // E3. Services Modal
+  private renderServicesModal(): void {
+    const card = el('div', 'pq-modal-card pq-modal-wide');
+
+    const header = el('div', 'pq-modal-header');
+    const titleBox = el('div');
+    titleBox.append(
+      el('span', 'pq-modal-kicker', '⚖ MARKET STALL ⚖'),
+      el('h2', 'pq-modal-title', 'Services Market'),
+    );
+    const closeBtn = el('button', 'pq-modal-close', '✕');
+    closeBtn.type = 'button';
+    closeBtn.addEventListener('click', () => this.closeModal());
+    header.append(titleBox, closeBtn);
+
+    const grid = el('div', 'pq-skills-grid');
+
+    SERVICES_DATA.forEach((service) => {
+      const item = el('div', 'pq-skill-cat');
+      const titleRow = el('h3', 'pq-skill-cat-title');
+      titleRow.append(
+        el('span', 'pq-skill-cat-icon', service.icon),
+        document.createTextNode(` ${service.title}`),
+      );
+      item.append(titleRow);
+      item.append(el('p', 'pq-skill-note', service.tagline));
+      item.append(el('p', undefined, service.description));
+      if (service.deliverables.length > 0) {
+        const dl = el('ul', 'pq-detail-list');
+        service.deliverables.forEach((d) => dl.append(el('li', undefined, d)));
+        item.append(dl);
+      }
+      if (service.technologies.length > 0) {
+        const techRow = el('div', 'pq-tech-pills');
+        service.technologies.forEach((t) => techRow.append(el('span', 'pq-tech-pill', t)));
+        item.append(techRow);
+      }
+      grid.append(item);
+    });
+
+    card.append(header, grid);
     this.modalContainer.replaceChildren(card);
   }
 
